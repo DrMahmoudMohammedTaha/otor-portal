@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTOR - Quran Certification Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3v19M5 12h14M12 3L5 12m7-9l7 9" />
+                </svg>
+                <span class="brand-title">OTOR Portal</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="orders-page" id="nav-orders">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>Orders</span>
+                </a>
+                <a href="#" class="nav-item" data-page="sheikhs-page" id="nav-sheikhs">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Sheikhs</span>
+                </a>
+                <a href="#" class="nav-item" data-page="cashbox-page" id="nav-cashbox">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    <span>Cashbox</span>
+                </a>
+                <a href="#" class="nav-item" data-page="expenses-page" id="nav-expenses">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                        <polyline points="17 6 23 6 23 12"></polyline>
+                    </svg>
+                    <span>Expenses</span>
+                </a>
+            </nav>
+            
+            <!-- Package tracking badge -->
+            <div class="package-card" id="package-badge-container">
+                <span class="package-label">Package Status</span>
+                <button class="package-btn green" id="package-timer-btn" title="Click to start new package">Loading...</button>
+                <span class="package-help">Days elapsed since last run</span>
+            </div>
+        </aside>
+
+        <!-- Main Window Container -->
+        <main class="main-content">
+            
+            <!-- PAGE 1: ORDERS DASHBOARD -->
+            <section id="orders-page" class="page-section active">
+                <header class="page-header">
+                    <div>
+                        <h1 class="page-title">Active Orders</h1>
+                        <p class="page-subtitle">Track printing queue lifecycle states</p>
+                    </div>
+                    <button class="btn btn-primary" id="btn-new-order">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>New Order</span>
+                    </button>
+                </header>
+
+                <!-- Status Tabs -->
+                <div class="tabs-container">
+                    <div class="tabs-list">
+                        <button class="tab-item active" data-state="ALL">All Active</button>
+                        <button class="tab-item" data-state="NEXT">Next</button>
+                        <button class="tab-item" data-state="DESIGN">Design</button>
+                        <button class="tab-item" data-state="PRINT">Print</button>
+                        <button class="tab-item" data-state="POST">Post</button>
+                        <button class="tab-item" data-state="DELIVER">Deliver</button>
+                    </div>
+                </div>
+
+                <!-- Orders Grid -->
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table class="data-table" id="orders-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Sheikh Name</th>
+                                    <th>Contents Description</th>
+                                    <th>Cost</th>
+                                    <th>Paid</th>
+                                    <th>Rest</th>
+                                    <th>Degree</th>
+                                    <th>State</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-list-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="orders-empty" class="empty-state hidden">
+                        <p>No active orders found in this state.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PAGE 2: SHEIKHS DIRECTORY -->
+            <section id="sheikhs-page" class="page-section">
+                <header class="page-header">
+                    <div>
+                        <h1 class="page-title">Sheikh Directory</h1>
+                        <p class="page-subtitle">Manage contacts and view historical statistics</p>
+                    </div>
+                    <button class="btn btn-primary" id="btn-new-sheikh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Add Sheikh</span>
+                    </button>
+                </header>
+
+                <div class="search-bar">
+                    <input type="text" id="sheikhs-search-input" placeholder="Search by name..." class="form-control">
+                </div>
+
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table class="data-table" id="sheikhs-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Phone</th>
+                                    <th>Gender</th>
+                                    <th>Location</th>
+                                    <th>Total Spending</th>
+                                    <th>Total Items</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sheikhs-list-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PAGE 3: CASHBOX & VODAFONE CODES -->
+            <section id="cashbox-page" class="page-section">
+                <header class="page-header">
+                    <div>
+                        <h1 class="page-title">Printing Cashbox</h1>
+                        <p class="page-subtitle">Calculate printing invoice values and copy transaction codes</p>
+                    </div>
+                </header>
+
+                <div class="cashbox-layout">
+                    <div class="card calc-card">
+                        <h3 class="card-title">Paper Quantity Calculator</h3>
+                        <div class="calc-grid">
+                            <div class="form-group">
+                                <label for="calc-a4-200">A4 (200 gm) [1.5 L.E]</label>
+                                <input type="number" id="calc-a4-200" class="form-control calc-input" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="calc-a4-300">A4 (300 gm) [2.0 L.E]</label>
+                                <input type="number" id="calc-a4-300" class="form-control calc-input" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="calc-a3-200">A3 (200 gm) [3.0 L.E]</label>
+                                <input type="number" id="calc-a3-200" class="form-control calc-input" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="calc-a3-300">A3 (300 gm) [4.0 L.E]</label>
+                                <input type="number" id="calc-a3-300" class="form-control calc-input" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="calc-landscape-200">Landscape 200 gm [4.0 L.E]</label>
+                                <input type="number" id="calc-landscape-200" class="form-control calc-input" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="calc-color-80">Color 80 gm [0.9 L.E]</label>
+                                <input type="number" id="calc-color-80" class="form-control calc-input" placeholder="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="calc-gray-80">Grayscale 80 gm [0.45 L.E]</label>
+                                <input type="number" id="calc-gray-80" class="form-control calc-input" placeholder="0">
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary w-full" id="btn-calc-clear" style="margin-top: 1rem;">Reset</button>
+                    </div>
+
+                    <div class="card result-card">
+                        <h3 class="card-title">Generated Invoice Details</h3>
+                        <textarea id="calc-result-text" class="form-control invoice-text" readonly></textarea>
+                        
+                        <div class="wallet-helper" style="margin-top: 1.5rem;">
+                            <h4 class="wallet-title">Vodafone Cash Transfer USSD Code</h4>
+                            <div class="ussd-copy-box">
+                                <input type="text" id="ussd-output" class="form-control" readonly value="*9*7*phone*amount#">
+                                <button class="btn btn-secondary" id="btn-copy-ussd">Copy Code</button>
+                            </div>
+
+                            <div class="quick-phones">
+                                <span class="quick-phones-label">Quick Contacts:</span>
+                                <div class="quick-phones-grid">
+                                    <button class="btn btn-small" data-phone="01011187735">Contact 1</button>
+                                    <button class="btn btn-small" data-phone="01018719149">Contact 2</button>
+                                    <button class="btn btn-small" data-phone="01020486984">Contact 3</button>
+                                    <button class="btn btn-small" data-phone="01002530431">Contact 4</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PAGE 4: EXPENSES & BUDGETS -->
+            <section id="expenses-page" class="page-section">
+                <header class="page-header">
+                    <div>
+                        <h1 class="page-title">Expenses Ledger</h1>
+                        <p class="page-subtitle">Track payments and budget breakdown</p>
+                    </div>
+                </header>
+
+                <div class="expenses-layout">
+                    <!-- Left: Category Totals & Log -->
+                    <div class="expenses-records">
+                        <!-- Category totals widgets -->
+                        <div class="category-cards-grid" id="category-totals-container">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- Expenses List -->
+                        <div class="table-card" style="margin-top: 1.5rem;">
+                            <div class="table-wrapper">
+                                <table class="data-table" id="expenses-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Category</th>
+                                            <th>Amount</th>
+                                            <th>Date</th>
+                                            <th>Comment</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expenses-list-body">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Add Expense Form -->
+                    <div class="card expense-form-card">
+                        <h3 class="card-title">Add Expense</h3>
+                        <form id="expense-add-form">
+                            <div class="form-group">
+                                <label for="exp-name">Expense Label</label>
+                                <input type="text" id="exp-name" class="form-control" required placeholder="e.g. Rent">
+                            </div>
+                            <div class="form-group">
+                                <label for="exp-amount">Amount (L.E)</label>
+                                <input type="number" id="exp-amount" step="0.01" class="form-control" required placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="exp-category">Category</label>
+                                <select id="exp-category" class="form-control" required>
+                                    <option value="Rent">Rent</option>
+                                    <option value="Salaries">Salaries</option>
+                                    <option value="Prints">Prints</option>
+                                    <option value="Shipping">Shipping</option>
+                                    <option value="Utilities">Utilities</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="exp-comment">Comment</label>
+                                <textarea id="exp-comment" class="form-control" placeholder="Optional details..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-full">Save Expense</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ==========================================
+    MODAL 1: ORDER DETAILS & CONTENT DRAWER
+    ========================================== -->
+    <div id="details-modal" class="modal-backdrop hidden">
+        <div class="modal-container modal-large">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="details-modal-title">Order #56 Details</h2>
+                    <p class="modal-subtitle" id="details-modal-subtitle">Active order details and content list</p>
+                </div>
+                <button class="btn-close-modal" id="btn-close-details">&times;</button>
+            </div>
+            <div class="modal-body">
+                
+                <!-- Sheikh Card Info -->
+                <div class="details-sheikh-grid">
+                    <div class="sheikh-info-block">
+                        <h4>👳 Sheikh Contact Information</h4>
+                        <div class="sheikh-meta-grid">
+                            <div><strong>Name:</strong> <span id="det-sheikh-name">-</span></div>
+                            <div><strong>Phone:</strong> <span id="det-sheikh-phone">-</span></div>
+                            <div><strong>City:</strong> <span id="det-sheikh-city">-</span></div>
+                            <div><strong>Address:</strong> <span id="det-sheikh-address">-</span></div>
+                        </div>
+                    </div>
+                    <div class="order-info-block">
+                        <h4>📋 Order Financial Summary</h4>
+                        <div class="order-meta-grid">
+                            <div><strong>State:</strong> <span class="badge" id="det-order-state">NEXT</span></div>
+                            <div><strong>Cost:</strong> <span id="det-order-cost">0.00 L.E</span></div>
+                            <div><strong>Paid:</strong> <span id="det-order-paid">0.00 L.E</span></div>
+                            <div><strong>Rest:</strong> <span id="det-order-rest" class="text-danger">0.00 L.E</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs to Switch between View Items & Bulk Insert -->
+                <div class="modal-subtabs">
+                    <button class="subtab-item active" id="subtab-view-items">View Line Items</button>
+                    <button class="subtab-item" id="subtab-bulk-insert">Bulk Ejaza Import</button>
+                </div>
+
+                <!-- View items Tab -->
+                <div id="modal-tab-items-content" class="subtab-content active">
+                    <div class="item-add-row-form">
+                        <h5>Add Single Line Item:</h5>
+                        <div class="item-form-grid">
+                            <input type="text" id="new-item-student" placeholder="Student Name" class="form-control">
+                            <select id="new-item-gender" class="form-control">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                            <input type="text" id="new-item-qeraa" placeholder="Qeraa" class="form-control">
+                            <input type="text" id="new-item-tareq" placeholder="Tareq" class="form-control">
+                            <button class="btn btn-primary" id="btn-add-item">Add</button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-wrapper" style="max-height: 250px; overflow-y: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Student Name</th>
+                                    <th>Gender</th>
+                                    <th>Qeraa</th>
+                                    <th>Tareq</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="details-items-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Bulk insert Tab -->
+                <div id="modal-tab-bulk-content" class="subtab-content">
+                    <div class="bulk-instructions">
+                        <h5>📋 Paste a list of students in the text area below:</h5>
+                        <p>Format required per line: <strong>Student Name - Gender - Info - Qeraat</strong> (divided by hyphens `-` )</p>
+                        <p><em>Example: Mahmoud Taha - Male - Riwayah - Hafs An Asem</em></p>
+                    </div>
+                    <textarea id="bulk-raw-text" class="form-control bulk-textarea" placeholder="Mahmoud Taha - Male - Riwayah - Hafs An Asem&#10;Aisha Ali - Female - Riwayah - Warsh An Nafi'"></textarea>
+                    <button class="btn btn-primary w-full" id="btn-submit-bulk" style="margin-top: 1rem;">Parse & Import List</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    MODAL 2: ORDER ADD/EDIT FORM
+    ========================================== -->
+    <div id="order-form-modal" class="modal-backdrop hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="order-form-title">New Order</h2>
+                    <p class="modal-subtitle">Save order details into the system</p>
+                </div>
+                <button class="btn-close-modal" id="btn-close-order-form">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="order-submit-form">
+                    <input type="hidden" id="order-form-id">
+                    
+                    <div class="form-group">
+                        <label for="order-sheikh-id">Sheikh Partner</label>
+                        <select id="order-sheikh-id" class="form-control" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-contents">Contents Summary</label>
+                        <input type="text" id="order-contents" class="form-control" placeholder="e.g. 5 Ejaza Plates">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="order-cost">Total Invoice Cost (L.E)</label>
+                            <input type="number" id="order-cost" step="0.01" class="form-control" required value="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="order-paid">Amount Paid (L.E)</label>
+                            <input type="number" id="order-paid" step="0.01" class="form-control" required value="0.00">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="order-state">Status State</label>
+                            <select id="order-state" class="form-control">
+                                <option value="NEXT">Next</option>
+                                <option value="DESIGN">Design</option>
+                                <option value="PRINT">Print</option>
+                                <option value="POST">Post</option>
+                                <option value="DELIVER">Deliver</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="order-degree">Priority Degree</label>
+                            <input type="number" id="order-degree" class="form-control" value="0">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="order-comment">Internal Comments</label>
+                        <textarea id="order-comment" class="form-control" placeholder="Add optional order instructions..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full" id="btn-save-order">Create Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    MODAL 3: SHEIKH ADD/EDIT FORM
+    ========================================== -->
+    <div id="sheikh-form-modal" class="modal-backdrop hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="sheikh-form-title">Add New Sheikh</h2>
+                    <p class="modal-subtitle">Save contact and shipping details</p>
+                </div>
+                <button class="btn-close-modal" id="btn-close-sheikh-form">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="sheikh-submit-form">
+                    <input type="hidden" id="sheikh-form-id">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sheikh-name">Sheikh Name</label>
+                            <input type="text" id="sheikh-name" class="form-control" required placeholder="Full Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="sheikh-gender">Gender Type</label>
+                            <select id="sheikh-gender" class="form-control">
+                                <option value="true">Male (معلم)</option>
+                                <option value="false">Female (معلمة)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sheikh-phone">Contact Phone</label>
+                            <input type="text" id="sheikh-phone" class="form-control" placeholder="Phone number">
+                        </div>
+                        <div class="form-group">
+                            <label for="sheikh-receiver-name">Receiver Name (if different)</label>
+                            <input type="text" id="sheikh-receiver-name" class="form-control" placeholder="Receiver full name">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sheikh-country">Country</label>
+                            <input type="text" id="sheikh-country" class="form-control" value="Egypt">
+                        </div>
+                        <div class="form-group">
+                            <label for="sheikh-city">City / Province</label>
+                            <input type="text" id="sheikh-city" class="form-control" placeholder="e.g. Cairo">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sheikh-address">Shipping Address</label>
+                        <input type="text" id="sheikh-address" class="form-control" placeholder="Full postal delivery address">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sheikh-info">Educational Info (Qeraat, etc.)</label>
+                        <textarea id="sheikh-info" class="form-control" placeholder="Qualifications or remarks..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sheikh-comment">Internal Remarks</label>
+                        <textarea id="sheikh-comment" class="form-control" placeholder="Add administrative details..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-full" id="btn-save-sheikh">Create Sheikh Partner</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Entrypoint -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
