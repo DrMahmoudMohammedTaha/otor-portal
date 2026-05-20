@@ -14,7 +14,49 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast hidden"></div>
 
-    <div class="app-container">
+    <!-- ==========================================
+    LOGIN SCREEN OVERLAY
+    ========================================== -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <div class="brand" style="justify-content: center; margin-bottom: 1.5rem;">
+                <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 3v19M5 12h14M12 3L5 12m7-9l7 9" />
+                </svg>
+                <span class="brand-title">OTOR Portal</span>
+            </div>
+            
+            <h2 class="login-heading">Welcome Back</h2>
+            <p class="login-subheading">Select your portal workspace credential</p>
+            
+            <div class="role-selector">
+                <label class="role-option" id="label-role-admin">
+                    <input type="radio" name="login-role" value="admin" checked>
+                    <span>System Admin</span>
+                </label>
+                <label class="role-option" id="label-role-sheikh">
+                    <input type="radio" name="login-role" value="sheikh">
+                    <span>Partner Sheikh</span>
+                </label>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group" id="login-password-group">
+                    <label for="login-password">System Admin Passcode</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+                </div>
+                
+                <div class="form-group hidden" id="login-phone-group">
+                    <label for="login-phone">Registered Contact Phone</label>
+                    <input type="text" id="login-phone" class="form-control" placeholder="e.g. 01011112222">
+                </div>
+                
+                <button type="submit" class="btn btn-primary w-full" style="margin-top: 1.25rem;">Access Dashboard</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-container hidden" id="app-workspace">
         
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
@@ -25,7 +67,8 @@
                 <span class="brand-title">OTOR Portal</span>
             </div>
             
-            <nav class="nav-menu">
+            <!-- ADMIN MENU -->
+            <nav class="nav-menu" id="admin-nav">
                 <a href="#" class="nav-item active" data-page="orders-page" id="nav-orders">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -33,7 +76,7 @@
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    <span>Orders</span>
+                    <span>Orders Queue</span>
                 </a>
                 <a href="#" class="nav-item" data-page="sheikhs-page" id="nav-sheikhs">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -59,19 +102,44 @@
                     <span>Expenses</span>
                 </a>
             </nav>
+
+            <!-- SHEIKH MENU -->
+            <nav class="nav-menu hidden" id="sheikh-nav">
+                <a href="#" class="nav-item active" data-page="sheikh-portal-page" id="nav-sheikh-portal">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>My Certificates</span>
+                </a>
+            </nav>
             
-            <!-- Package tracking badge -->
+            <!-- Admin-only Package tracking -->
             <div class="package-card" id="package-badge-container">
                 <span class="package-label">Package Status</span>
-                <button class="package-btn green" id="package-timer-btn" title="Click to start new package">Loading...</button>
+                <button class="package-btn green" id="package-timer-btn">Loading...</button>
                 <span class="package-help">Days elapsed since last run</span>
             </div>
+
+            <!-- Logout Link -->
+            <a href="#" class="nav-item" id="nav-logout" style="margin-top: 1rem; color: var(--color-danger); border-color: transparent;">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span>Logout</span>
+            </a>
         </aside>
 
         <!-- Main Window Container -->
         <main class="main-content">
             
-            <!-- PAGE 1: ORDERS DASHBOARD -->
+            <!-- ==========================================
+            ADMIN PAGE 1: ORDERS DASHBOARD
+            ========================================== -->
             <section id="orders-page" class="page-section active">
                 <header class="page-header">
                     <div>
@@ -87,7 +155,6 @@
                     </button>
                 </header>
 
-                <!-- Status Tabs -->
                 <div class="tabs-container">
                     <div class="tabs-list">
                         <button class="tab-item active" data-state="ALL">All Active</button>
@@ -99,7 +166,6 @@
                     </div>
                 </div>
 
-                <!-- Orders Grid -->
                 <div class="table-card">
                     <div class="table-wrapper">
                         <table class="data-table" id="orders-table">
@@ -127,7 +193,9 @@
                 </div>
             </section>
 
-            <!-- PAGE 2: SHEIKHS DIRECTORY -->
+            <!-- ==========================================
+            ADMIN PAGE 2: SHEIKHS DIRECTORY
+            ========================================== -->
             <section id="sheikhs-page" class="page-section">
                 <header class="page-header">
                     <div>
@@ -170,7 +238,9 @@
                 </div>
             </section>
 
-            <!-- PAGE 3: CASHBOX & VODAFONE CODES -->
+            <!-- ==========================================
+            ADMIN PAGE 3: CASHBOX & CALCULATOR
+            ========================================== -->
             <section id="cashbox-page" class="page-section">
                 <header class="page-header">
                     <div>
@@ -240,7 +310,9 @@
                 </div>
             </section>
 
-            <!-- PAGE 4: EXPENSES & BUDGETS -->
+            <!-- ==========================================
+            ADMIN PAGE 4: EXPENSES LEDGER
+            ========================================== -->
             <section id="expenses-page" class="page-section">
                 <header class="page-header">
                     <div>
@@ -250,14 +322,10 @@
                 </header>
 
                 <div class="expenses-layout">
-                    <!-- Left: Category Totals & Log -->
                     <div class="expenses-records">
-                        <!-- Category totals widgets -->
                         <div class="category-cards-grid" id="category-totals-container">
                             <!-- Populated dynamically -->
                         </div>
-
-                        <!-- Expenses List -->
                         <div class="table-card" style="margin-top: 1.5rem;">
                             <div class="table-wrapper">
                                 <table class="data-table" id="expenses-table">
@@ -278,7 +346,6 @@
                         </div>
                     </div>
 
-                    <!-- Right: Add Expense Form -->
                     <div class="card expense-form-card">
                         <h3 class="card-title">Add Expense</h3>
                         <form id="expense-add-form">
@@ -311,6 +378,86 @@
                 </div>
             </section>
 
+            <!-- ==========================================
+            SHEIKH DEDICATED PORTAL
+            ========================================== -->
+            <section id="sheikh-portal-page" class="page-section">
+                <header class="page-header">
+                    <div>
+                        <h1 class="page-title">My Quran Certifications</h1>
+                        <p class="page-subtitle" id="sheikh-portal-welcome">Welcome Sheikh</p>
+                    </div>
+                </header>
+
+                <!-- Financial Stats Widgets -->
+                <div class="category-cards-grid" style="margin-bottom: 2rem;">
+                    <div class="category-summary-card">
+                        <span class="category-sum-val" id="sh-stat-active">0</span>
+                        <span class="category-sum-name">Active Orders</span>
+                    </div>
+                    <div class="category-summary-card">
+                        <span class="category-sum-val" id="sh-stat-plates">0</span>
+                        <span class="category-sum-name">Historical Plates</span>
+                    </div>
+                    <div class="category-summary-card">
+                        <span class="category-sum-val text-danger" id="sh-stat-balance">0.00 L.E</span>
+                        <span class="category-sum-name">Pending Balance (Rest)</span>
+                    </div>
+                </div>
+
+                <div class="modal-subtabs">
+                    <button class="subtab-item active" id="sh-tab-active-orders">Active Queue</button>
+                    <button class="subtab-item" id="sh-tab-history">Order History</button>
+                </div>
+
+                <!-- Active Queue -->
+                <div id="sh-active-orders-panel" class="subtab-content active">
+                    <div class="table-card">
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Certification Summary</th>
+                                        <th>Cost</th>
+                                        <th>Paid</th>
+                                        <th>Outstanding Balance</th>
+                                        <th>Queue Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sh-orders-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completed History -->
+                <div id="sh-history-panel" class="subtab-content">
+                    <div class="table-card">
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Certifications</th>
+                                        <th>Total Cost</th>
+                                        <th>Total Paid</th>
+                                        <th>Status Date</th>
+                                        <th>State</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sh-history-body">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -328,7 +475,6 @@
             </div>
             <div class="modal-body">
                 
-                <!-- Sheikh Card Info -->
                 <div class="details-sheikh-grid">
                     <div class="sheikh-info-block">
                         <h4>👳 Sheikh Contact Information</h4>
@@ -350,15 +496,14 @@
                     </div>
                 </div>
 
-                <!-- Tabs to Switch between View Items & Bulk Insert -->
-                <div class="modal-subtabs">
+                <div class="modal-subtabs" id="details-modal-tabs-list">
                     <button class="subtab-item active" id="subtab-view-items">View Line Items</button>
                     <button class="subtab-item" id="subtab-bulk-insert">Bulk Ejaza Import</button>
                 </div>
 
                 <!-- View items Tab -->
                 <div id="modal-tab-items-content" class="subtab-content active">
-                    <div class="item-add-row-form">
+                    <div class="item-add-row-form" id="details-add-item-form-wrapper">
                         <h5>Add Single Line Item:</h5>
                         <div class="item-form-grid">
                             <input type="text" id="new-item-student" placeholder="Student Name" class="form-control">
@@ -381,7 +526,7 @@
                                     <th>Gender</th>
                                     <th>Qeraa</th>
                                     <th>Tareq</th>
-                                    <th>Actions</th>
+                                    <th id="details-items-actions-header">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="details-items-body">

@@ -1,1000 +1,1205 @@
-// ==========================================================================
-// OTOR QuranCertification Portal - Single Page Application JS Engine
-// ==========================================================================
+/* ==========================================================================
+   OTOR Single Page Application Frontend Script
+   Supporting Role-Based Access Control (Admin & Sheikh Portals)
+   ========================================================================== */
 
-// Global SPA state
-let activePage = "orders-page";
-let activeOrderFilter = "ALL";
-let currentOrderDetailsId = null;
-let sheikhsCache = []; // Caches sheikhs list for dropdown populating
+const API_BASE = "/api";
 
+// State management
+let currentRole = null;
+let sessionToken = null;
+let loggedSheikhId = null;
+
+// ==========================================
+// Session Handling Functions
+// ==========================================
+function getSession() {
+    sessionToken = localStorage.getItem("otor_token");
+    currentRole = localStorage.getItem("otor_role");
+    const sheikhIdRaw = localStorage.getItem("otor_sheikh_id");
+    loggedSheikhId = sheikhIdRaw ? parseInt(sheikhIdRaw, 10) : null;
+    return !!sessionToken;
+}
+
+function saveSession(token, role, name, sheikhId) {
+    localStorage.setItem("otor_token", token);
+    localStorage.setItem("otor_role", role);
+    localStorage.setItem("otor_name", name);
+    if (sheikhId) {
+        localStorage.setItem("otor_sheikh_id", sheikhId);
+    } else {
+        localStorage.removeItem("otor_sheikh_id");
+    }
+    sessionToken = token;
+    currentRole = role;
+    loggedSheikhId = sheikhId;
+}
+
+function clearSession() {
+    localStorage.removeItem("otor_token");
+    localStorage.removeItem("otor_role");
+    localStorage.removeItem("otor_name");
+    localStorage.removeItem("otor_sheikh_id");
+    sessionToken = null;
+    currentRole = null;
+    loggedSheikhId = null;
+}
+
+// Fetch helper that automatically attaches authorization token headers
+async function fetchSecure(url, options = {}) {
+    if (!options.headers) {
+        options.headers = {};
+    }
+    if (sessionToken) {
+        options.headers["Authorization"] = `Bearer ${sessionToken}`;
+    }
+    if (options.body && !(options.body instanceof FormData)) {
+        options.headers["Content-Type"] = "application/json";
+    }
+    
+    const response = await fetch(url, options);
+    if (response.status === 403 || response.status === 401) {
+        // Session expired or unauthorized -> logout
+        showToast("Session expired or unauthorized.", "error");
+        handleLogout();
+        throw new Error("Unauthorized");
+    }
+    return response;
+}
+
+// ==========================================
+// Application Startup & Event Listeners
+// ==========================================
 document.addEventListener("DOMContentLoaded", () => {
     initApp();
+    setupEventListeners();
 });
 
 function initApp() {
-    setupNavigation();
-    setupDashboard();
-    setupSheikhs();
-    setupCashbox();
-    setupExpenses();
-    setupPackageTimer();
-    setupModals();
-    
-    // Initial data load
-    loadOrders();
-    loadSheikhsDropdown();
-    loadPackageStatus();
+    if (getSession()) {
+        document.getElementById("login-overlay").classList.add("hidden");
+        document.getElementById("app-workspace").classList.remove("hidden");
+        
+        applyRoleInterface();
+    } else {
+        document.getElementById("login-overlay").classList.remove("hidden");
+        document.getElementById("app-workspace").classList.add("hidden");
+    }
 }
 
-// ==========================================
-// 1. Navigation & Routing
-// ==========================================
-function setupNavigation() {
-    const navItems = document.querySelectorAll(".nav-item");
-    navItems.forEach(item => {
+// Apply visual overrides based on role
+function applyRoleInterface() {
+    const adminNav = document.getElementById("admin-nav");
+    const sheikhNav = document.getElementById("sheikh-nav");
+    const packageBadge = document.getElementById("package-badge-container");
+    
+    // Default resets
+    document.querySelectorAll(".page-section").forEach(s => s.classList.remove("active"));
+    document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+    
+    if (currentRole === "admin") {
+        adminNav.classList.remove("hidden");
+        sheikhNav.classList.add("hidden");
+        packageBadge.classList.remove("hidden");
+        
+        // Show first admin page (orders)
+        document.getElementById("orders-page").classList.add("active");
+        document.getElementById("nav-orders").classList.add("active");
+        
+        // Load admin resources
+        loadOrders();
+        loadSheikhs();
+        loadPackageTimer();
+        loadExpenses();
+    } else if (currentRole === "sheikh") {
+        adminNav.classList.add("hidden");
+        sheikhNav.classList.remove("hidden");
+        packageBadge.classList.add("hidden"); // Hide print run package timer from sheikhs
+        
+        // Show sheikh portal
+        document.getElementById("sheikh-portal-page").classList.add("active");
+        document.getElementById("nav-sheikh-portal").classList.add("active");
+        
+        // Load sheikh database records
+        loadSheikhPortal();
+    }
+}
+
+function handleLogout() {
+    clearSession();
+    initApp();
+    showToast("Logged out successfully.");
+}
+
+function setupEventListeners() {
+    // ------------------------------------------
+    // Login Screen Handlers
+    // ------------------------------------------
+    const roleRadioAdmin = document.querySelector('input[name="login-role"][value="admin"]');
+    const roleRadioSheikh = document.querySelector('input[name="login-role"][value="sheikh"]');
+    const loginPasswordGroup = document.getElementById("login-password-group");
+    const loginPhoneGroup = document.getElementById("login-phone-group");
+    const loginForm = document.getElementById("login-form");
+    
+    roleRadioAdmin.addEventListener("change", () => {
+        loginPasswordGroup.classList.remove("hidden");
+        loginPhoneGroup.classList.add("hidden");
+    });
+    
+    roleRadioSheikh.addEventListener("change", () => {
+        loginPasswordGroup.classList.add("hidden");
+        loginPhoneGroup.classList.remove("hidden");
+    });
+    
+    loginForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const selectedRole = document.querySelector('input[name="login-role"]:checked').value;
+        const password = document.getElementById("login-password").value;
+        const phone = document.getElementById("login-phone").value;
+        
+        try {
+            const response = await fetch(`${API_BASE}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: selectedRole, password, phone })
+            });
+            
+            if (!response.ok) {
+                const errData = await response.json();
+                throw new Error(errData.detail || "Authentication failed.");
+            }
+            
+            const data = await response.json();
+            saveSession(data.token, data.role, data.name, data.sheikh_id);
+            
+            // Clean fields
+            document.getElementById("login-password").value = "";
+            document.getElementById("login-phone").value = "";
+            
+            showToast(`Welcome, ${data.name}!`, "success");
+            initApp();
+            
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    });
+
+    // ------------------------------------------
+    // Global Navigation & Logout
+    // ------------------------------------------
+    document.querySelectorAll(".nav-item[data-page]").forEach(item => {
         item.addEventListener("click", (e) => {
             e.preventDefault();
-            const pageId = item.getAttribute("data-page");
+            const targetPage = item.getAttribute("data-page");
             
-            // Toggle active sidebar items
-            navItems.forEach(nav => nav.classList.remove("active"));
+            document.querySelectorAll(".page-section").forEach(s => s.classList.remove("active"));
+            document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+            
+            document.getElementById(targetPage).classList.add("active");
             item.classList.add("active");
             
-            // Toggle visible page sections
-            document.querySelectorAll(".page-section").forEach(sec => sec.classList.remove("active"));
-            document.getElementById(pageId).classList.add("active");
-            
-            activePage = pageId;
-            
-            // Fetch fresh data for respective page
-            if (pageId === "orders-page") {
-                loadOrders();
-            } else if (pageId === "sheikhs-page") {
-                loadSheikhs();
-            } else if (pageId === "expenses-page") {
-                loadExpenses();
-            }
+            // Refresh lists upon navigational entry
+            if (targetPage === "orders-page") loadOrders();
+            if (targetPage === "sheikhs-page") loadSheikhs();
+            if (targetPage === "expenses-page") loadExpenses();
+            if (targetPage === "sheikh-portal-page") loadSheikhPortal();
         });
     });
-}
-
-// Toast utility
-function showToast(message, type = "success") {
-    const toast = document.getElementById("toast");
-    toast.textContent = message;
-    toast.className = `toast ${type}`;
     
-    setTimeout(() => {
-        toast.classList.add("hidden");
-    }, 3000);
-}
+    document.getElementById("nav-logout").addEventListener("click", (e) => {
+        e.preventDefault();
+        handleLogout();
+    });
 
-// ==========================================
-// 2. Orders Dashboard
-// ==========================================
-function setupDashboard() {
-    // Tabs clicking
-    const tabs = document.querySelectorAll(".tab-item");
-    tabs.forEach(tab => {
+    // ------------------------------------------
+    // Admin: Active Orders Tab Filtering
+    // ------------------------------------------
+    document.querySelectorAll(".tab-item").forEach(tab => {
         tab.addEventListener("click", () => {
-            tabs.forEach(t => t.classList.remove("active"));
+            document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
             tab.classList.add("active");
-            activeOrderFilter = tab.getAttribute("data-state");
             loadOrders();
         });
     });
 
-    // Add Order Button
-    document.getElementById("btn-new-order").addEventListener("click", () => {
-        openOrderFormModal();
+    // ------------------------------------------
+    // Sheikh: Portal Subtabs
+    // ------------------------------------------
+    const shTabActive = document.getElementById("sh-tab-active-orders");
+    const shTabHistory = document.getElementById("sh-tab-history");
+    const shActivePanel = document.getElementById("sh-active-orders-panel");
+    const shHistoryPanel = document.getElementById("sh-history-panel");
+    
+    shTabActive.addEventListener("click", () => {
+        shTabActive.classList.add("active");
+        shTabHistory.classList.remove("active");
+        shActivePanel.classList.add("active");
+        shHistoryPanel.classList.remove("active");
+        loadSheikhPortal();
+    });
+    
+    shTabHistory.addEventListener("click", () => {
+        shTabActive.classList.remove("active");
+        shTabHistory.classList.add("active");
+        shActivePanel.classList.remove("active");
+        shHistoryPanel.classList.add("active");
+        loadSheikhPortal();
     });
 
-    // Handle Order form submit
-    document.getElementById("order-submit-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const id = document.getElementById("order-form-id").value;
-        const payload = {
-            sheikh_id: parseInt(document.getElementById("order-sheikh-id").value),
-            contents: document.getElementById("order-contents").value,
-            cost: parseFloat(document.getElementById("order-cost").value),
-            paid: parseFloat(document.getElementById("order-paid").value),
-            state: document.getElementById("order-state").value,
-            degree: parseFloat(document.getElementById("order-degree").value),
-            comment: document.getElementById("order-comment").value
-        };
+    // ------------------------------------------
+    // Orders CRUD Modals
+    // ------------------------------------------
+    document.getElementById("btn-new-order").addEventListener("click", () => openOrderFormModal(null));
+    document.getElementById("btn-close-order-form").addEventListener("click", () => closeOrderFormModal());
+    document.getElementById("order-submit-form").addEventListener("submit", handleOrderSubmit);
+    
+    // ------------------------------------------
+    // Sheikhs CRUD Modals
+    // ------------------------------------------
+    document.getElementById("btn-new-sheikh").addEventListener("click", () => openSheikhFormModal(null));
+    document.getElementById("btn-close-sheikh-form").addEventListener("click", () => closeSheikhFormModal());
+    document.getElementById("sheikh-submit-form").addEventListener("submit", handleSheikhSubmit);
+    document.getElementById("sheikhs-search-input").addEventListener("input", debounce(loadSheikhs, 300));
+    
+    // ------------------------------------------
+    // Order Detail Modal Elements
+    // ------------------------------------------
+    document.getElementById("btn-close-details").addEventListener("click", () => {
+        document.getElementById("details-modal").classList.add("hidden");
+    });
+    
+    // Detail Modal Subtabs
+    const subtabItems = document.getElementById("subtab-view-items");
+    const subtabBulk = document.getElementById("subtab-bulk-insert");
+    const tabItemsContent = document.getElementById("modal-tab-items-content");
+    const tabBulkContent = document.getElementById("modal-tab-bulk-content");
+    
+    subtabItems.addEventListener("click", () => {
+        subtabItems.classList.add("active");
+        subtabBulk.classList.remove("active");
+        tabItemsContent.classList.add("active");
+        tabBulkContent.classList.remove("active");
+    });
+    
+    subtabBulk.addEventListener("click", () => {
+        subtabItems.classList.remove("active");
+        subtabBulk.classList.add("active");
+        tabItemsContent.classList.remove("active");
+        tabBulkContent.classList.add("active");
+    });
+    
+    document.getElementById("btn-add-item").addEventListener("click", handleAddSingleItem);
+    document.getElementById("btn-submit-bulk").addEventListener("click", handleBulkParse);
 
+    // ------------------------------------------
+    // Cashbox & Printing Invoice Calculator
+    // ------------------------------------------
+    const calcInputs = document.querySelectorAll(".calc-input");
+    calcInputs.forEach(input => {
+        input.addEventListener("input", recalculateInvoice);
+    });
+    
+    document.getElementById("btn-calc-clear").addEventListener("click", () => {
+        calcInputs.forEach(i => i.value = "");
+        recalculateInvoice();
+    });
+    
+    document.getElementById("btn-copy-ussd").addEventListener("click", () => {
+        const ussdBox = document.getElementById("ussd-output");
+        ussdBox.select();
+        document.execCommand("copy");
+        showToast("Vodafone Cash USSD Code copied to clipboard!", "success");
+    });
+    
+    document.querySelectorAll(".quick-phones-grid button").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const phone = btn.getAttribute("data-phone");
+            updateUSSDCode(phone, getInvoiceTotal());
+        });
+    });
+
+    // ------------------------------------------
+    // Expenses Ledger
+    // ------------------------------------------
+    document.getElementById("expense-add-form").addEventListener("submit", handleExpenseSubmit);
+    
+    // ------------------------------------------
+    // Package Indicator Action (Admin only)
+    // ------------------------------------------
+    document.getElementById("package-timer-btn").addEventListener("click", async () => {
+        if (currentRole !== "admin") return;
+        if (!confirm("Are you sure you want to start a new print run? This will reset the elapsed time counter.")) return;
         try {
-            let response;
-            if (id) {
-                // Update
-                response = await fetch(`/api/orders/${id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                // Create
-                response = await fetch("/api/orders", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
+            const res = await fetchSecure(`${API_BASE}/package/start`, { method: "POST" });
+            if (res.ok) {
+                showToast("New package run initialized!", "success");
+                loadPackageTimer();
             }
-
-            if (response.ok) {
-                showToast(id ? "Order updated successfully." : "Order created successfully.");
-                closeModal("order-form-modal");
-                loadOrders();
-            } else {
-                showToast("Failed to save order.", "error");
-            }
-        } catch (err) {
-            console.error(err);
-            showToast("Network error saving order.", "error");
+        } catch (e) {
+            console.error(e);
         }
     });
 }
 
-async function loadOrders() {
+// ==========================================
+// SHEIKH PORTAL BUSINESS LOGIC
+// ==========================================
+async function loadSheikhPortal() {
+    if (!loggedSheikhId) return;
+    
     try {
-        const response = await fetch(`/api/orders?state=${activeOrderFilter}`);
-        const data = await response.json();
+        // Welcome and Stats header
+        const statsRes = await fetchSecure(`${API_BASE}/sheikhs/${loggedSheikhId}/stats`);
+        const stats = await statsRes.json();
+        
+        document.getElementById("sheikh-portal-welcome").textContent = `Welcome, Sheikh ${stats.name}`;
+        document.getElementById("sh-stat-active").textContent = stats.active_orders_count;
+        document.getElementById("sh-stat-plates").textContent = stats.total_historical_items;
+        
+        // Fetch active queue to compute total pending balance (rest)
+        const activeRes = await fetchSecure(`${API_BASE}/orders?sheikh_id=${loggedSheikhId}`);
+        const activeOrders = await activeRes.json();
+        
+        let totalRest = 0;
+        activeOrders.forEach(o => totalRest += (o.rest || 0));
+        document.getElementById("sh-stat-balance").textContent = `${totalRest.toFixed(2)} L.E`;
+        
+        // Populate specific selected subtab panel
+        const isActiveTab = document.getElementById("sh-tab-active-orders").classList.contains("active");
+        if (isActiveTab) {
+            renderSheikhActiveOrders(activeOrders);
+        } else {
+            const historyRes = await fetchSecure(`${API_BASE}/orders/history?sheikh_id=${loggedSheikhId}`);
+            const historyOrders = await historyRes.json();
+            renderSheikhHistoryOrders(historyOrders);
+        }
+        
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function renderSheikhActiveOrders(orders) {
+    const body = document.getElementById("sh-orders-body");
+    body.innerHTML = "";
+    
+    if (orders.length === 0) {
+        body.innerHTML = `<tr><td colspan="7" style="text-align:center;">No active orders currently in print queues.</td></tr>`;
+        return;
+    }
+    
+    orders.forEach(o => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>#${o.id}</td>
+            <td>${escapeHTML(o.contents || "-")}</td>
+            <td>${(o.cost || 0).toFixed(2)} L.E</td>
+            <td>${(o.paid || 0).toFixed(2)} L.E</td>
+            <td class="text-danger">${(o.rest || 0).toFixed(2)} L.E</td>
+            <td><span class="badge badge-${o.state.toLowerCase()}">${o.state}</span></td>
+            <td>
+                <button class="btn btn-secondary btn-small" onclick="showOrderDetails(${o.id})">
+                    🔍 View items
+                </button>
+            </td>
+        `;
+        body.appendChild(tr);
+    });
+}
+
+function renderSheikhHistoryOrders(history) {
+    const body = document.getElementById("sh-history-body");
+    body.innerHTML = "";
+    
+    if (history.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align:center;">No historical completed orders found.</td></tr>`;
+        return;
+    }
+    
+    history.forEach(o => {
+        const tr = document.createElement("tr");
+        const dateStr = o.update_date ? new Date(o.update_date).toLocaleDateString() : "-";
+        tr.innerHTML = `
+            <td>#${o.id}</td>
+            <td>${escapeHTML(o.contents || "-")}</td>
+            <td>${(o.cost || 0).toFixed(2)} L.E</td>
+            <td>${(o.paid || 0).toFixed(2)} L.E</td>
+            <td>${dateStr}</td>
+            <td><span class="badge badge-deliver">COMPLETED</span></td>
+        `;
+        body.appendChild(tr);
+    });
+}
+
+// ==========================================
+// ADMIN WORKSPACE LOADERS
+// ==========================================
+
+// Load package counter
+async function loadPackageTimer() {
+    try {
+        const res = await fetchSecure(`${API_BASE}/package/status`);
+        const data = await res.json();
+        const btn = document.getElementById("package-timer-btn");
+        
+        btn.textContent = `${data.days_elapsed}d`;
+        
+        btn.className = "package-btn";
+        if (data.days_elapsed < 3) {
+            btn.classList.add("green");
+        } else if (data.days_elapsed < 6) {
+            btn.classList.add("yellow");
+        } else if (data.days_elapsed < 9) {
+            btn.classList.add("orange");
+        } else {
+            btn.classList.add("red");
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// Load Active Orders
+async function loadOrders() {
+    if (currentRole !== "admin") return;
+    const activeTab = document.querySelector(".tab-item.active");
+    const stateFilter = activeTab ? activeTab.getAttribute("data-state") : "ALL";
+    
+    try {
+        const res = await fetchSecure(`${API_BASE}/orders?state=${stateFilter}`);
+        const orders = await res.json();
         
         const body = document.getElementById("orders-list-body");
+        const emptyState = document.getElementById("orders-empty");
+        
         body.innerHTML = "";
         
-        const emptyState = document.getElementById("orders-empty");
-        if (data.length === 0) {
+        if (orders.length === 0) {
             emptyState.classList.remove("hidden");
             return;
         }
         emptyState.classList.add("hidden");
         
-        data.forEach(order => {
+        orders.forEach(o => {
             const tr = document.createElement("tr");
-            
-            // Double-click row opens Details drawer
-            tr.addEventListener("dblclick", () => {
-                openDetailsModal(order.id);
-            });
-            
-            const cost = order.cost || 0;
-            const paid = order.paid || 0;
-            const rest = order.rest || 0;
-            
             tr.innerHTML = `
-                <td><strong>#${order.id}</strong></td>
+                <td>#${o.id}</td>
                 <td>
-                    <div style="font-weight: 600;">${order.sheikh_name || '-'}</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted);">${order.sheikh_phone || ''} (${order.sheikh_city || ''})</div>
+                    <div style="font-weight: 600;">${escapeHTML(o.sheikh_name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHTML(o.sheikh_phone || "")} ${escapeHTML(o.sheikh_city || "")}</div>
                 </td>
-                <td>${order.contents || '-'}</td>
-                <td>${cost.toLocaleString()} L.E</td>
-                <td>${paid.toLocaleString()} L.E</td>
-                <td class="${rest > 0 ? 'text-danger' : 'text-success'}">${rest.toLocaleString()} L.E</td>
-                <td>${order.degree || 0}</td>
-                <td><span class="badge badge-${order.state.toLowerCase()}">${order.state}</span></td>
+                <td>${escapeHTML(o.contents || "-")}</td>
+                <td>${o.cost.toFixed(2)}</td>
+                <td>${o.paid.toFixed(2)}</td>
+                <td class="${o.rest > 0 ? 'text-danger' : 'text-success'}">${o.rest.toFixed(2)}</td>
+                <td>${o.degree}</td>
+                <td><span class="badge badge-${o.state.toLowerCase()}">${o.state}</span></td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn btn-details" title="Order Details" onclick="openDetailsModal(${order.id})">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <button class="action-btn btn-details" onclick="showOrderDetails(${o.id})" title="Details & Certificates">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
                         </button>
-                        <button class="action-btn" title="Edit Order" onclick="editOrder(${order.id})">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <button class="action-btn" onclick="cycleOrderState(${o.id}, '${o.state}')" title="Cycle Next State">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
                         </button>
-                        <button class="action-btn" title="Cycle State Up" onclick="cycleOrderState(${order.id}, '${order.state}', 'up')">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        <button class="action-btn" onclick="openOrderFormModal(${o.id})" title="Edit Details">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
                         </button>
-                        <button class="action-btn" title="Cycle State Down" onclick="cycleOrderState(${order.id}, '${order.state}', 'down')">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </button>
-                        <button class="action-btn" title="Open Sheikh Folder" onclick="openSheikhFolder('${order.sheikh_name}')">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                        </button>
-                        <button class="action-btn btn-delete" title="Delete Order" onclick="deleteOrder(${order.id}, '${order.sheikh_name}')">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <button class="action-btn btn-delete" onclick="handleDeleteOrder(${o.id})" title="Delete Order">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
                         </button>
                     </div>
                 </td>
             `;
-            
             body.appendChild(tr);
         });
-    } catch (err) {
-        console.error(err);
-        showToast("Error loading active orders.", "error");
+        
+    } catch (e) {
+        console.error(e);
     }
 }
 
-// Cycles order states up/down (VBA KeyCode state shift)
-const STATE_SEQUENCE = ["NEXT", "DESIGN", "PRINT", "POST", "DELIVER", "DONE"];
-
-async function cycleOrderState(id, currentState, direction) {
-    const idx = STATE_SEQUENCE.indexOf(currentState.toUpperCase());
-    if (idx === -1) return;
+// State cycling machine transitions
+async function cycleOrderState(id, currentState) {
+    const states = ["NEXT", "DESIGN", "PRINT", "POST", "DELIVER", "DONE"];
+    const curIndex = states.indexOf(currentState.toUpperCase());
+    if (curIndex === -1 || curIndex === states.length - 1) return;
     
-    let nextIdx = idx;
-    if (direction === "up") {
-        nextIdx = Math.min(STATE_SEQUENCE.length - 1, idx + 1);
-    } else {
-        nextIdx = Math.max(0, idx - 1);
-    }
-    
-    if (nextIdx === idx) return; // No change
-    
-    const targetState = STATE_SEQUENCE[nextIdx];
+    const nextState = states[curIndex + 1];
     
     try {
-        const response = await fetch(`/api/orders/${id}/state`, {
+        const response = await fetchSecure(`${API_BASE}/orders/${id}/state`, {
             method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ state: targetState })
+            body: JSON.stringify({ state: nextState })
         });
-        const result = await response.json();
         
         if (response.ok) {
-            if (result.status === "state_coerced_to_deliver") {
-                showToast("Cannot set state to DONE until REST payment is 0. Resetting to DELIVER.", "error");
-            } else if (result.status === "archived") {
-                showToast("Order completed and archived to History successfully.");
+            const data = await response.json();
+            if (data.status === "state_coerced_to_deliver") {
+                showToast("Order transitioned to DELIVER due to outstanding payment balance.", "warning");
+            } else if (data.status === "archived") {
+                showToast("Order fully paid and archived to Order History!", "success");
             } else {
-                showToast(`Order state transitioned to ${targetState}.`);
+                showToast(`Order status cycled to ${nextState}!`, "success");
             }
             loadOrders();
-        } else {
-            showToast("Failed to transition order state.", "error");
         }
-    } catch (err) {
-        console.error(err);
-        showToast("Network error cycling state.", "error");
+    } catch (e) {
+        console.error(e);
     }
 }
 
-async function openSheikhFolder(name) {
-    if (!name) return;
+// Load Sheikh List
+async function loadSheikhs() {
+    if (currentRole !== "admin") return;
+    const queryVal = document.getElementById("sheikhs-search-input").value.trim();
+    const url = queryVal ? `${API_BASE}/sheikhs?search=${encodeURIComponent(queryVal)}` : `${API_BASE}/sheikhs`;
+    
     try {
-        const response = await fetch("/api/system/open-folder", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sheikh_name: name })
-        });
-        const data = await response.json();
-        
-        if (response.ok) {
-            showToast(`Opened explorer window at: ${data.path}`);
-        } else {
-            showToast(`Error opening folder: ${data.detail}`, "error");
-        }
-    } catch (err) {
-        console.error(err);
-        showToast("Local explorer folder could not be opened.", "error");
-    }
-}
-
-async function editOrder(id) {
-    try {
-        const response = await fetch(`/api/orders/${id}`);
-        const data = await response.json();
-        if (response.ok && !data.archived) {
-            openOrderFormModal(data.order);
-        } else {
-            showToast("Cannot edit completed or non-existent order.", "error");
-        }
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-async function deleteOrder(id, name) {
-    if (confirm(`Are you sure you want to delete order #${id} for Sheikh ${name}? This will delete all its line item records.`)) {
-        try {
-            const response = await fetch(`/api/orders/${id}`, { method: "DELETE" });
-            if (response.ok) {
-                showToast("Order and associated contents deleted.");
-                loadOrders();
-            } else {
-                showToast("Failed to delete order.", "error");
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    }
-}
-
-// ==========================================
-// 3. Sheikh Directory
-// ==========================================
-function setupSheikhs() {
-    // Search input
-    document.getElementById("sheikhs-search-input").addEventListener("input", (e) => {
-        loadSheikhs(e.target.value);
-    });
-
-    // Add sheikh btn
-    document.getElementById("btn-new-sheikh").addEventListener("click", () => {
-        openSheikhFormModal();
-    });
-
-    // Sheikh form submit
-    document.getElementById("sheikh-submit-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const id = document.getElementById("sheikh-form-id").value;
-        const payload = {
-            name: document.getElementById("sheikh-name").value,
-            gender: document.getElementById("sheikh-gender").value === "true",
-            phone: document.getElementById("sheikh-phone").value,
-            receiver_name: document.getElementById("sheikh-receiver-name").value,
-            country: document.getElementById("sheikh-country").value,
-            city: document.getElementById("sheikh-city").value,
-            address: document.getElementById("sheikh-address").value,
-            info: document.getElementById("sheikh-info").value,
-            comment: document.getElementById("sheikh-comment").value
-        };
-
-        try {
-            let response;
-            if (id) {
-                response = await fetch(`/api/sheikhs/${id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                response = await fetch("/api/sheikhs", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (response.ok) {
-                showToast(id ? "Sheikh updated." : "Sheikh created.");
-                closeModal("sheikh-form-modal");
-                loadSheikhs();
-                loadSheikhsDropdown();
-            } else {
-                showToast("Failed to save sheikh.", "error");
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    });
-}
-
-async function loadSheikhsDropdown() {
-    try {
-        const response = await fetch("/api/sheikhs");
-        const data = await response.json();
-        sheikhsCache = data;
-        
-        const selectEl = document.getElementById("order-sheikh-id");
-        selectEl.innerHTML = '<option value="">-- Choose Partner --</option>';
-        data.forEach(sheikh => {
-            selectEl.innerHTML += `<option value="${sheikh.id}">${sheikh.name}</option>`;
-        });
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-async function loadSheikhs(search = "") {
-    try {
-        const response = await fetch(`/api/sheikhs?search=${search}`);
-        const sheikhs = await response.json();
+        const res = await fetchSecure(url);
+        const sheikhs = await res.json();
         
         const body = document.getElementById("sheikhs-list-body");
         body.innerHTML = "";
         
-        for (const sheikh of sheikhs) {
-            // Get statistics asynchronously (total cost, items count)
-            const statsResp = await fetch(`/api/sheikhs/${sheikh.id}/stats`);
-            const stats = await statsResp.json();
+        // Loop and load aggregate metrics asynchronously
+        for (const s of sheikhs) {
+            const statsRes = await fetchSecure(`${API_BASE}/sheikhs/${s.id}/stats`);
+            const stats = await statsRes.json();
             
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td><strong>#${sheikh.id}</strong></td>
+                <td>#${s.id}</td>
                 <td>
-                    <div style="font-weight: 600;">${sheikh.name}</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted);">${sheikh.receiver_name ? 'Receiver: ' + sheikh.receiver_name : ''}</div>
+                    <div style="font-weight: 600;">${escapeHTML(s.name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${s.gender ? "Male (معلم)" : "Female (معلمة)"}</div>
                 </td>
-                <td>${sheikh.phone || '-'}</td>
-                <td>${sheikh.gender ? 'Male' : 'Female'}</td>
-                <td>${sheikh.city || ''}, ${sheikh.country || ''}</td>
-                <td>${stats.total_historical_cost.toLocaleString()} L.E</td>
-                <td>${stats.total_historical_items.toLocaleString()} plates</td>
+                <td>${escapeHTML(s.phone || "-")}</td>
+                <td>${s.gender ? "Male" : "Female"}</td>
+                <td>${escapeHTML(s.city || "")} ${escapeHTML(s.country || "")}</td>
+                <td>${stats.total_historical_cost.toFixed(2)} L.E</td>
+                <td>${stats.total_historical_items} plates</td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn" title="Edit Sheikh" onclick="editSheikh(${sheikh.id})">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <button class="action-btn btn-details" onclick="openSystemSheikhFolder('${s.name}')" title="Open Local Storage Folder">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                            </svg>
                         </button>
-                        <button class="action-btn" title="Open Sheikh Folder" onclick="openSheikhFolder('${sheikh.name}')">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        <button class="action-btn" onclick="openSheikhFormModal(${s.id})" title="Edit Info">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
                         </button>
-                        <button class="action-btn btn-delete" title="Delete Sheikh" onclick="deleteSheikh(${sheikh.id}, '${sheikh.name}')">
-                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <button class="action-btn btn-delete" onclick="handleDeleteSheikh(${s.id})" title="Delete Partner">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                <line x1="10" y1="11" x2="10" y2="17"></line>
+                                <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
                         </button>
                     </div>
                 </td>
             `;
             body.appendChild(tr);
         }
-    } catch (err) {
-        console.error(err);
+        
+    } catch (e) {
+        console.error(e);
     }
 }
 
-async function editSheikh(id) {
+// Trigger Windows Explorer folder creation and loading
+async function openSystemSheikhFolder(name) {
     try {
-        const response = await fetch(`/api/sheikhs/${id}`);
-        const sheikh = await response.json();
-        if (response.ok) {
-            openSheikhFormModal(sheikh);
-        }
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-async function deleteSheikh(id, name) {
-    if (confirm(`Are you sure you want to delete Sheikh ${name}?`)) {
-        try {
-            const response = await fetch(`/api/sheikhs/${id}`, { method: "DELETE" });
-            if (response.ok) {
-                showToast("Sheikh partner deleted.");
-                loadSheikhs();
-                loadSheikhsDropdown();
-            } else {
-                showToast("Could not delete sheikh.", "error");
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    }
-}
-
-// ==========================================
-// 4. Cashbox & Invoice Calculator
-// ==========================================
-function setupCashbox() {
-    const calcInputs = document.querySelectorAll(".calc-input");
-    calcInputs.forEach(input => {
-        input.addEventListener("input", recalculateInvoice);
-    });
-
-    document.getElementById("btn-calc-clear").addEventListener("click", () => {
-        calcInputs.forEach(input => input.value = "");
-        recalculateInvoice();
-    });
-
-    // Copy USSD code
-    document.getElementById("btn-copy-ussd").addEventListener("click", () => {
-        const ussd = document.getElementById("ussd-output").value;
-        navigator.clipboard.writeText(ussd);
-        showToast("USSD code copied to clipboard!");
-    });
-
-    // Quick contacts
-    const phoneBtns = document.querySelectorAll(".quick-phones-grid button");
-    phoneBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const phone = btn.getAttribute("data-phone");
-            updateUSSDPhone(phone);
+        const res = await fetchSecure(`${API_BASE}/system/open-folder`, {
+            method: "POST",
+            body: JSON.stringify({ sheikh_name: name })
         });
-    });
-}
-
-let lastCalculatedCost = 0;
-
-function recalculateInvoice() {
-    const a4_200 = parseInt(document.getElementById("calc-a4-200").value) || 0;
-    const a4_300 = parseInt(document.getElementById("calc-a4-300").value) || 0;
-    const a3_200 = parseInt(document.getElementById("calc-a3-200").value) || 0;
-    const a3_300 = parseInt(document.getElementById("calc-a3-300").value) || 0;
-    const land_200 = parseInt(document.getElementById("calc-landscape-200").value) || 0;
-    const color_80 = parseInt(document.getElementById("calc-color-80").value) || 0;
-    const gray_80 = parseInt(document.getElementById("calc-gray-80").value) || 0;
-
-    let invoice = "Invoice details:\n";
-    let total = 0;
-
-    if (a4_200 > 0) {
-        const sub = a4_200 * 1.5;
-        invoice += `${sub} L.E --> ${a4_200} sheets --> a4 - 200 gm\n`;
-        total += sub;
-    }
-    if (a4_300 > 0) {
-        const sub = a4_300 * 2.0;
-        invoice += `${sub} L.E --> ${a4_300} sheets --> a4 - 300 gm\n`;
-        total += sub;
-    }
-    if (a3_200 > 0) {
-        const sub = a3_200 * 3.0;
-        invoice += `${sub} L.E --> ${a3_200} sheets --> a3 - 200 gm\n`;
-        total += sub;
-    }
-    if (a3_300 > 0) {
-        const sub = a3_300 * 4.0;
-        invoice += `${sub} L.E --> ${a3_300} sheets --> a3 - 300 gm\n`;
-        total += sub;
-    }
-    if (land_200 > 0) {
-        const sub = land_200 * 4.0;
-        invoice += `${sub} L.E --> ${land_200} sheets --> landscape 200 gm\n`;
-        total += sub;
-    }
-    if (color_80 > 0) {
-        const sub = color_80 * 0.9;
-        invoice += `${sub} L.E --> ${color_80} sheets --> 80 gm color landscape\n`;
-        total += sub;
-    }
-    if (gray_80 > 0) {
-        const sub = gray_80 * 0.45;
-        invoice += `${sub} L.E --> ${gray_80} sheets --> 80 gm grayscale landscape\n`;
-        total += sub;
-    }
-
-    invoice += `\nTotal printing cost = ${total} L.E\n`;
-    document.getElementById("calc-result-text").value = total > 0 ? invoice : "";
-
-    lastCalculatedCost = total;
-    updateUSSDCode();
-}
-
-function updateUSSDPhone(phone) {
-    const currentUSSD = document.getElementById("ussd-output").value;
-    const parts = currentUSSD.split("*");
-    
-    // USSD structure: *9*7*phone*amount#
-    if (parts.length >= 5) {
-        parts[3] = phone;
-        document.getElementById("ussd-output").value = parts.join("*");
-    } else {
-        document.getElementById("ussd-output").value = `*9*7*${phone}*${lastCalculatedCost}#`;
-    }
-}
-
-function updateUSSDCode() {
-    const currentUSSD = document.getElementById("ussd-output").value;
-    const parts = currentUSSD.split("*");
-    
-    let phone = "phone";
-    if (parts.length >= 5) {
-        phone = parts[3];
-    }
-    
-    document.getElementById("ussd-output").value = `*9*7*${phone}*${lastCalculatedCost}#`;
-}
-
-// ==========================================
-// 5. Expenses Ledger
-// ==========================================
-function setupExpenses() {
-    document.getElementById("expense-add-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const payload = {
-            expense: document.getElementById("exp-name").value,
-            amount: parseFloat(document.getElementById("exp-amount").value),
-            category: document.getElementById("exp-category").value,
-            comment: document.getElementById("exp-comment").value
-        };
-
-        try {
-            const response = await fetch("/api/expenses", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            if (response.ok) {
-                showToast("Expense recorded successfully.");
-                document.getElementById("expense-add-form").reset();
-                loadExpenses();
-            } else {
-                showToast("Failed to save expense.", "error");
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    });
-}
-
-async function loadExpenses() {
-    try {
-        // Load past log
-        const listResp = await fetch("/api/expenses");
-        const expenses = await listResp.json();
-        
-        const body = document.getElementById("expenses-list-body");
-        body.innerHTML = "";
-        
-        expenses.forEach(exp => {
-            const tr = document.createElement("tr");
-            const dateStr = exp.due_date ? new Date(exp.due_date).toLocaleDateString() : "-";
-            tr.innerHTML = `
-                <td><strong>${exp.expense}</strong></td>
-                <td><span class="badge badge-next">${exp.category}</span></td>
-                <td>${exp.amount.toLocaleString()} L.E</td>
-                <td>${dateStr}</td>
-                <td style="color:var(--text-muted); font-size: 0.85rem;">${exp.comment || '-'}</td>
-            `;
-            body.appendChild(tr);
-        });
-
-        // Load Category breakdown widgets
-        const catResp = await fetch("/api/expenses/categories");
-        const categories = await catResp.json();
-        
-        const grid = document.getElementById("category-totals-container");
-        grid.innerHTML = "";
-        
-        categories.forEach(c => {
-            grid.innerHTML += `
-                <div class="category-summary-card">
-                    <span class="category-sum-val">${c.total.toLocaleString()} L.E</span>
-                    <span class="category-sum-name">${c.category}</span>
-                </div>
-            `;
-        });
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-// ==========================================
-// 6. Package Status Indicator (check_package logic)
-// ==========================================
-function setupPackageTimer() {
-    document.getElementById("package-timer-btn").addEventListener("click", async () => {
-        if (confirm("Start a new mailing package package timer now?")) {
-            try {
-                const response = await fetch("/api/package/start", { method: "POST" });
-                if (response.ok) {
-                    showToast("New package started.");
-                    loadPackageStatus();
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        }
-    });
-}
-
-async function loadPackageStatus() {
-    try {
-        const response = await fetch("/api/package/status");
-        const data = await response.json();
-        
-        const btn = document.getElementById("package-timer-btn");
-        const elapsed = data.days_elapsed;
-        
-        btn.textContent = elapsed;
-        btn.className = "package-btn"; // Reset base classes
-        
-        // Color transition logic (VBA check_package)
-        if (elapsed < 7) {
-            btn.classList.add("green");
-        } else if (elapsed < 14) {
-            btn.classList.add("yellow");
-        } else if (elapsed < 21) {
-            btn.classList.add("orange");
+        if (res.ok) {
+            showToast(`Opened folder locally for ${name}.`, "success");
         } else {
-            btn.classList.add("red");
+            const err = await res.json();
+            showToast(`Local open error: ${err.detail}`, "error");
         }
-    } catch (err) {
-        console.error(err);
+    } catch (e) {
+        showToast("Open folder triggers are only supported when running the server on a local machine.", "warning");
     }
 }
 
 // ==========================================
-// 7. Modals Controllers (Open/Close)
+// CERTIFICATE LINE ITEMS & BULK EJAZA DETAILS
 // ==========================================
-function setupModals() {
-    // Backdrop clicking closes modal
-    document.querySelectorAll(".modal-backdrop").forEach(modal => {
-        modal.addEventListener("click", (e) => {
-            if (e.target === modal) {
-                modal.classList.add("hidden");
-            }
-        });
-    });
+let activeDetailsOrderId = null;
 
-    // Close button clicking
-    document.getElementById("btn-close-details").addEventListener("click", () => closeModal("details-modal"));
-    document.getElementById("btn-close-order-form").addEventListener("click", () => closeModal("order-form-modal"));
-    document.getElementById("btn-close-sheikh-form").addEventListener("click", () => closeModal("sheikh-form-modal"));
-}
-
-function openModal(id) {
-    document.getElementById(id).classList.remove("hidden");
-}
-
-function closeModal(id) {
-    document.getElementById(id).classList.add("hidden");
-}
-
-// Order Form Modal
-function openOrderFormModal(order = null) {
-    const title = document.getElementById("order-form-title");
-    const saveBtn = document.getElementById("btn-save-order");
-    const form = document.getElementById("order-submit-form");
+async function showOrderDetails(orderId) {
+    activeDetailsOrderId = orderId;
     
-    form.reset();
+    // Default subtabs
+    document.getElementById("subtab-view-items").classList.add("active");
+    document.getElementById("subtab-bulk-insert").classList.remove("active");
+    document.getElementById("modal-tab-items-content").classList.add("active");
+    document.getElementById("modal-tab-bulk-content").classList.remove("none");
+    document.getElementById("modal-tab-bulk-content").classList.add("hidden");
 
-    if (order) {
-        title.textContent = `Edit Order #${order.id}`;
-        saveBtn.textContent = "Save Changes";
-        document.getElementById("order-form-id").value = order.id;
-        document.getElementById("order-sheikh-id").value = order.sheikh_id || "";
-        document.getElementById("order-contents").value = order.contents || "";
-        document.getElementById("order-cost").value = order.cost || 0.0;
-        document.getElementById("order-paid").value = order.paid || 0.0;
-        document.getElementById("order-state").value = order.state || "NEXT";
-        document.getElementById("order-degree").value = order.degree || 0;
-        document.getElementById("order-comment").value = order.comment || "";
-    } else {
-        title.textContent = "New Order Partner";
-        saveBtn.textContent = "Create Order";
-        document.getElementById("order-form-id").value = "";
-    }
-    
-    openModal("order-form-modal");
-}
-
-// Sheikh Form Modal
-function openSheikhFormModal(sheikh = null) {
-    const title = document.getElementById("sheikh-form-title");
-    const saveBtn = document.getElementById("btn-save-sheikh");
-    const form = document.getElementById("sheikh-submit-form");
-    
-    form.reset();
-
-    if (sheikh) {
-        title.textContent = `Edit Sheikh #${sheikh.id}`;
-        saveBtn.textContent = "Save Changes";
-        document.getElementById("sheikh-form-id").value = sheikh.id;
-        document.getElementById("sheikh-name").value = sheikh.name;
-        document.getElementById("sheikh-gender").value = sheikh.gender ? "true" : "false";
-        document.getElementById("sheikh-phone").value = sheikh.phone || "";
-        document.getElementById("sheikh-receiver-name").value = sheikh.receiver_name || "";
-        document.getElementById("sheikh-country").value = sheikh.country || "Egypt";
-        document.getElementById("sheikh-city").value = sheikh.city || "";
-        document.getElementById("sheikh-address").value = sheikh.address || "";
-        document.getElementById("sheikh-info").value = sheikh.info || "";
-        document.getElementById("sheikh-comment").value = sheikh.comment || "";
-    } else {
-        title.textContent = "Add New Sheikh";
-        saveBtn.textContent = "Create Sheikh Partner";
-        document.getElementById("sheikh-form-id").value = "";
-    }
-    
-    openModal("sheikh-form-modal");
-}
-
-// Order Details & Drawer Modal
-async function openDetailsModal(orderId) {
-    currentOrderDetailsId = orderId;
-    
     try {
-        const response = await fetch(`/api/orders/${orderId}`);
-        const data = await response.json();
+        const res = await fetchSecure(`${API_BASE}/orders/${orderId}`);
+        const data = await res.json();
         
-        if (!response.ok) {
-            showToast("Failed to fetch order details.", "error");
-            return;
+        document.getElementById("details-modal-title").textContent = `Order #${orderId} Overview`;
+        
+        // Populate profile card
+        if (data.order) {
+            document.getElementById("det-sheikh-name").textContent = data.order.sheikh_name || "-";
+            document.getElementById("det-order-state").textContent = data.order.state;
+            document.getElementById("det-order-state").className = `badge badge-${data.order.state.toLowerCase()}`;
+            document.getElementById("det-order-cost").textContent = `${data.order.cost.toFixed(2)} L.E`;
+            document.getElementById("det-order-paid").textContent = `${data.order.paid.toFixed(2)} L.E`;
+            document.getElementById("det-order-rest").textContent = `${data.order.rest.toFixed(2)} L.E`;
         }
-
-        const isArchived = data.archived;
-        const order = data.order;
-        const sheikh = data.sheikh;
-
-        // Set Header details
-        document.getElementById("details-modal-title").textContent = `Order #${order.id} details`;
-        document.getElementById("details-modal-subtitle").textContent = isArchived ? "Archived/Completed Historical Order" : "Active Certification Queue Order";
         
-        // Populate Sheikh Block
-        if (sheikh) {
-            document.getElementById("det-sheikh-name").textContent = sheikh.name || "-";
-            document.getElementById("det-sheikh-phone").textContent = sheikh.phone || "-";
-            document.getElementById("det-sheikh-city").textContent = sheikh.city || "-";
-            document.getElementById("det-sheikh-address").textContent = sheikh.address || "-";
+        // If sheikh details are loaded
+        if (data.sheikh) {
+            document.getElementById("det-sheikh-phone").textContent = data.sheikh.phone || "-";
+            document.getElementById("det-sheikh-city").textContent = data.sheikh.city || "-";
+            document.getElementById("det-sheikh-address").textContent = data.sheikh.address || "-";
         } else {
-            // Archived order caches name on order directly
-            document.getElementById("det-sheikh-name").textContent = order.sheikh_name || "-";
-            document.getElementById("det-sheikh-phone").textContent = order.p_phone || "-";
-            document.getElementById("det-sheikh-city").textContent = order.p_city || "-";
-            document.getElementById("det-sheikh-address").textContent = order.p_address || "-";
+            // Archived fallback or sheikh-only view defaults
+            document.getElementById("det-sheikh-phone").textContent = data.order.p_phone || "-";
+            document.getElementById("det-sheikh-city").textContent = data.order.p_city || "-";
+            document.getElementById("det-sheikh-address").textContent = data.order.p_address || "-";
         }
-
-        // Populate Order details
-        const stateBadge = document.getElementById("det-order-state");
-        stateBadge.textContent = order.state;
-        stateBadge.className = `badge badge-${order.state.toLowerCase()}`;
         
-        document.getElementById("det-order-cost").textContent = `${(order.cost || 0).toLocaleString()} L.E`;
-        document.getElementById("det-order-paid").textContent = `${(order.paid || 0).toLocaleString()} L.E`;
+        // ==========================================
+        // ROLE-BASED CONDITIONAL VIEWS FOR MODAL
+        // ==========================================
+        const singleFormWrapper = document.getElementById("details-add-item-form-wrapper");
+        const bulkTabHeader = document.getElementById("subtab-bulk-insert");
+        const itemsActionsHeader = document.getElementById("details-items-actions-header");
         
-        const restEl = document.getElementById("det-order-rest");
-        restEl.textContent = `${(order.rest || 0).toLocaleString()} L.E`;
-        if (order.rest > 0) {
-            restEl.className = "text-danger";
+        if (currentRole === "sheikh") {
+            // Hide modifications inputs & tabs
+            singleFormWrapper.classList.add("hidden");
+            bulkTabHeader.classList.add("hidden");
+            itemsActionsHeader.classList.add("hidden");
         } else {
-            restEl.className = "text-success";
+            // Admin permissions
+            singleFormWrapper.classList.remove("hidden");
+            bulkTabHeader.classList.remove("hidden");
+            itemsActionsHeader.classList.remove("hidden");
         }
 
-        // Default tabs configuration
-        setupDetailsTabs();
+        // Load items list
+        loadOrderContentItems(orderId);
         
-        // Load details items list
-        loadDetailsItems();
-
-        openModal("details-modal");
-    } catch (err) {
-        console.error(err);
-        showToast("Error retrieving order drawer contents.", "error");
+        // Show modal
+        document.getElementById("details-modal").classList.remove("hidden");
+        
+    } catch (e) {
+        console.error(e);
     }
 }
 
-function setupDetailsTabs() {
-    const tabItemsBtn = document.getElementById("subtab-view-items");
-    const tabBulkBtn = document.getElementById("subtab-bulk-insert");
-    
-    const panelItems = document.getElementById("modal-tab-items-content");
-    const panelBulk = document.getElementById("modal-tab-bulk-content");
-
-    // Clear state
-    tabItemsBtn.classList.add("active");
-    tabBulkBtn.classList.remove("active");
-    panelItems.classList.add("active");
-    panelBulk.classList.remove("active");
-
-    // Clicking
-    tabItemsBtn.onclick = () => {
-        tabItemsBtn.classList.add("active");
-        tabBulkBtn.classList.remove("active");
-        panelItems.classList.add("active");
-        panelBulk.classList.remove("active");
-    };
-
-    tabBulkBtn.onclick = () => {
-        tabBulkBtn.classList.add("active");
-        tabItemsBtn.classList.remove("active");
-        panelBulk.classList.add("active");
-        panelItems.classList.remove("active");
-    };
-
-    // Sub add item event listener setup
-    document.getElementById("btn-add-item").onclick = async () => {
-        const student = document.getElementById("new-item-student").value;
-        const gender = document.getElementById("new-item-gender").value;
-        const qeraa = document.getElementById("new-item-qeraa").value;
-        const tareq = document.getElementById("new-item-qeraa").value;
-
-        if (!student) {
-            showToast("Student Name is required.", "error");
-            return;
-        }
-
-        const payload = {
-            order_id: currentOrderDetailsId,
-            type: "EJAZA",
-            student_name: student,
-            student_gender: gender,
-            qeraa: qeraa,
-            tareq: tareq,
-            amount: 1.0,
-            cost: 0.0
-        };
-
-        try {
-            const resp = await fetch("/api/content", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            if (resp.ok) {
-                showToast("Line item added successfully.");
-                document.getElementById("new-item-student").value = "";
-                document.getElementById("new-item-qeraa").value = "";
-                document.getElementById("new-item-tareq").value = "";
-                loadDetailsItems();
-            } else {
-                showToast("Failed to add line item.", "error");
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    // Sub bulk items parse and submit
-    document.getElementById("btn-submit-bulk").onclick = async () => {
-        const rawText = document.getElementById("bulk-raw-text").value;
-        if (!rawText.trim()) {
-            showToast("Raw text list is empty.", "error");
-            return;
-        }
-
-        try {
-            const resp = await fetch("/api/content/bulk", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    order_id: currentOrderDetailsId,
-                    raw_text: rawText
-                })
-            });
-            const data = await resp.json();
-            
-            if (resp.ok) {
-                showToast(`Parsed and imported ${data.inserted_count} lines successfully.`);
-                document.getElementById("bulk-raw-text").value = "";
-                // Toggle back to list tab
-                tabItemsBtn.click();
-                loadDetailsItems();
-            } else {
-                showToast("Error parsing student rows.", "error");
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    };
-}
-
-async function loadDetailsItems() {
-    if (!currentOrderDetailsId) return;
+async function loadOrderContentItems(orderId) {
     try {
-        const response = await fetch(`/api/content?order_id=${currentOrderDetailsId}`);
-        const items = await response.json();
+        const res = await fetchSecure(`${API_BASE}/content?order_id=${orderId}`);
+        const items = await res.json();
         
         const body = document.getElementById("details-items-body");
         body.innerHTML = "";
         
-        items.forEach(item => {
+        if (items.length === 0) {
+            body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No certificate lines found.</td></tr>`;
+            return;
+        }
+        
+        items.forEach(i => {
             const tr = document.createElement("tr");
+            
+            // Build action buttons row conditionally based on role
+            let actionTd = "";
+            if (currentRole === "admin") {
+                actionTd = `
+                    <td>
+                        <button class="action-btn btn-delete btn-small" onclick="handleDeleteContent(${i.id})">
+                            &times;
+                        </button>
+                    </td>
+                `;
+            }
+            
             tr.innerHTML = `
-                <td><span class="badge badge-next">${item.type}</span></td>
-                <td><strong>${item.student_name || '-'}</strong></td>
-                <td>${item.student_gender || '-'}</td>
-                <td>${item.qeraa || '-'}</td>
-                <td>${item.tareq || '-'}</td>
-                <td>
-                    <button class="action-btn btn-delete" title="Remove Item" onclick="deleteContentItem(${item.id})">
-                        <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                    </button>
-                </td>
+                <td><span class="badge ${i.type === 'EJAZA' ? 'badge-design' : 'badge-next'}">${i.type}</span></td>
+                <td>${escapeHTML(i.student_name || "-")}</td>
+                <td>${escapeHTML(i.student_gender || "-")}</td>
+                <td>${escapeHTML(i.qeraa || "-")}</td>
+                <td>${escapeHTML(i.student_info || "-")}</td>
+                ${actionTd}
             `;
             body.appendChild(tr);
         });
-    } catch (err) {
-        console.error(err);
+    } catch (e) {
+        console.error(e);
     }
 }
 
-async function deleteContentItem(id) {
-    if (confirm("Delete this content line item?")) {
-        try {
-            const response = await fetch(`/api/content/${id}`, { method: "DELETE" });
-            if (response.ok) {
-                showToast("Content item deleted.");
-                loadDetailsItems();
-            } else {
-                showToast("Could not delete item.", "error");
-            }
-        } catch (err) {
-            console.error(err);
+// Add single certification row
+async function handleAddSingleItem() {
+    const student = document.getElementById("new-item-student").value.trim();
+    const gender = document.getElementById("new-item-gender").value;
+    const qeraa = document.getElementById("new-item-qeraa").value.trim();
+    const info = document.getElementById("new-item-tareq").value.trim();
+    
+    if (!student) {
+        showToast("Student name is required.", "error");
+        return;
+    }
+    
+    const payload = {
+        order_id: activeDetailsOrderId,
+        type: "EJAZA",
+        student_name: student,
+        student_gender: gender,
+        student_info: info,
+        qeraa: qeraa,
+        amount: 1.0,
+        cost: 0.0
+    };
+    
+    try {
+        const res = await fetchSecure(`${API_BASE}/content`, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            showToast("Line item added successfully!", "success");
+            // Clear inputs
+            document.getElementById("new-item-student").value = "";
+            document.getElementById("new-item-qeraa").value = "";
+            document.getElementById("new-item-tareq").value = "";
+            
+            loadOrderContentItems(activeDetailsOrderId);
         }
+    } catch (e) {
+        console.error(e);
     }
 }
 
-// Window references for onclick handlers
-window.openDetailsModal = openDetailsModal;
-window.editOrder = editOrder;
-window.deleteOrder = deleteOrder;
-window.cycleOrderState = cycleOrderState;
-window.openSheikhFolder = openSheikhFolder;
-window.editSheikh = editSheikh;
-window.deleteSheikh = deleteSheikh;
-window.deleteContentItem = deleteContentItem;
+// Parse multi-line EJAZA list (Command55 parsing logic)
+async function handleBulkParse() {
+    const rawText = document.getElementById("bulk-raw-text").value.trim();
+    if (!rawText) {
+        showToast("Please enter text lines to parse.", "error");
+        return;
+    }
+    
+    try {
+        const res = await fetchSecure(`${API_BASE}/content/bulk`, {
+            method: "POST",
+            body: JSON.stringify({
+                order_id: activeDetailsOrderId,
+                raw_text: rawText
+            })
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            showToast(`Parsed and imported ${data.inserted_count} lines!`, "success");
+            document.getElementById("bulk-raw-text").value = "";
+            
+            // Switch tab view back to items list
+            document.getElementById("subtab-view-items").click();
+            loadOrderContentItems(activeDetailsOrderId);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// Delete individual content line item
+async function handleDeleteContent(id) {
+    if (!confirm("Are you sure you want to delete this certificate item?")) return;
+    try {
+        const res = await fetchSecure(`${API_BASE}/content/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            showToast("Item deleted.");
+            loadOrderContentItems(activeDetailsOrderId);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ==========================================
+// FORMS SUBMISSION & MODALS CRUD
+// ==========================================
+
+// Order Modal Forms
+async function openOrderFormModal(orderId = null) {
+    const sheikhDropdown = document.getElementById("order-sheikh-id");
+    
+    // Populates sheikh dropdown options
+    try {
+        const sRes = await fetchSecure(`${API_BASE}/sheikhs`);
+        const sheikhs = await sRes.json();
+        sheikhDropdown.innerHTML = sheikhs.map(s => `<option value="${s.id}">${escapeHTML(s.name)}</option>`).join("");
+    } catch (e) {
+        console.error(e);
+    }
+    
+    if (orderId) {
+        // Edit Mode
+        document.getElementById("order-form-title").textContent = "Edit Order Details";
+        document.getElementById("btn-save-order").textContent = "Update Order";
+        
+        try {
+            const res = await fetchSecure(`${API_BASE}/orders/${orderId}`);
+            const data = await res.json();
+            const o = data.order;
+            
+            document.getElementById("order-form-id").value = o.id;
+            document.getElementById("order-sheikh-id").value = o.sheikh_id;
+            document.getElementById("order-contents").value = o.contents || "";
+            document.getElementById("order-cost").value = o.cost || 0.00;
+            document.getElementById("order-paid").value = o.paid || 0.00;
+            document.getElementById("order-state").value = o.state;
+            document.getElementById("order-degree").value = o.degree;
+            document.getElementById("order-comment").value = o.comment || "";
+            
+        } catch (e) {
+            console.error(e);
+        }
+    } else {
+        // Create Mode
+        document.getElementById("order-form-title").textContent = "New Order";
+        document.getElementById("btn-save-order").textContent = "Create Order";
+        document.getElementById("order-submit-form").reset();
+        document.getElementById("order-form-id").value = "";
+    }
+    
+    document.getElementById("order-form-modal").classList.remove("hidden");
+}
+
+function closeOrderFormModal() {
+    document.getElementById("order-form-modal").classList.add("hidden");
+}
+
+async function handleOrderSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById("order-form-id").value;
+    
+    const payload = {
+        sheikh_id: parseInt(document.getElementById("order-sheikh-id").value, 10),
+        contents: document.getElementById("order-contents").value.trim(),
+        cost: parseFloat(document.getElementById("order-cost").value) || 0.0,
+        paid: parseFloat(document.getElementById("order-paid").value) || 0.0,
+        state: document.getElementById("order-state").value,
+        degree: parseInt(document.getElementById("order-degree").value, 10) || 0,
+        comment: document.getElementById("order-comment").value.trim()
+    };
+    
+    const isEdit = !!id;
+    const url = isEdit ? `${API_BASE}/orders/${id}` : `${API_BASE}/orders`;
+    const method = isEdit ? "PUT" : "POST";
+    
+    try {
+        const res = await fetchSecure(url, {
+            method: method,
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            showToast(isEdit ? "Order details updated." : "New order registered!", "success");
+            closeOrderFormModal();
+            loadOrders();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function handleDeleteOrder(id) {
+    if (!confirm("Are you sure you want to delete this order? All related line certificate items will be permanently erased.")) return;
+    try {
+        const res = await fetchSecure(`${API_BASE}/orders/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            showToast("Order and certificate contents deleted.");
+            loadOrders();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// Sheikh Modal Forms
+async function openSheikhFormModal(sheikhId = null) {
+    if (sheikhId) {
+        document.getElementById("sheikh-form-title").textContent = "Edit Sheikh Details";
+        document.getElementById("btn-save-sheikh").textContent = "Update Partner Details";
+        
+        try {
+            const res = await fetchSecure(`${API_BASE}/sheikhs/${sheikhId}`);
+            const s = await res.json();
+            
+            document.getElementById("sheikh-form-id").value = s.id;
+            document.getElementById("sheikh-name").value = s.name;
+            document.getElementById("sheikh-gender").value = s.gender ? "true" : "false";
+            document.getElementById("sheikh-phone").value = s.phone || "";
+            document.getElementById("sheikh-receiver-name").value = s.receiver_name || "";
+            document.getElementById("sheikh-country").value = s.country || "Egypt";
+            document.getElementById("sheikh-city").value = s.city || "";
+            document.getElementById("sheikh-address").value = s.address || "";
+            document.getElementById("sheikh-info").value = s.info || "";
+            document.getElementById("sheikh-comment").value = s.comment || "";
+            
+        } catch (e) {
+            console.error(e);
+        }
+    } else {
+        document.getElementById("sheikh-form-title").textContent = "Add New Sheikh";
+        document.getElementById("btn-save-sheikh").textContent = "Create Sheikh Partner";
+        document.getElementById("sheikh-submit-form").reset();
+        document.getElementById("sheikh-form-id").value = "";
+    }
+    document.getElementById("sheikh-form-modal").classList.remove("hidden");
+}
+
+function closeSheikhFormModal() {
+    document.getElementById("sheikh-form-modal").classList.add("hidden");
+}
+
+async function handleSheikhSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById("sheikh-form-id").value;
+    
+    const payload = {
+        name: document.getElementById("sheikh-name").value.trim(),
+        gender: document.getElementById("sheikh-gender").value === "true",
+        phone: document.getElementById("sheikh-phone").value.trim(),
+        receiver_name: document.getElementById("sheikh-receiver-name").value.trim(),
+        country: document.getElementById("sheikh-country").value.trim() || "Egypt",
+        city: document.getElementById("sheikh-city").value.trim(),
+        address: document.getElementById("sheikh-address").value.trim(),
+        info: document.getElementById("sheikh-info").value.trim(),
+        comment: document.getElementById("sheikh-comment").value.trim()
+    };
+    
+    const isEdit = !!id;
+    const url = isEdit ? `${API_BASE}/sheikhs/${id}` : `${API_BASE}/sheikhs`;
+    const method = isEdit ? "PUT" : "POST";
+    
+    try {
+        const res = await fetchSecure(url, {
+            method: method,
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            showToast(isEdit ? "Sheikh details updated." : "New sheikh added successfully!", "success");
+            closeSheikhFormModal();
+            loadSheikhs();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function handleDeleteSheikh(id) {
+    if (!confirm("Are you sure you want to delete this sheikh? Active orders linked to them will remain, but database constraints will be updated.")) return;
+    try {
+        const res = await fetchSecure(`${API_BASE}/sheikhs/${id}`, { method: "DELETE" });
+        if (res.ok) {
+            showToast("Sheikh deleted successfully.");
+            loadSheikhs();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ==========================================
+// CASHBOX INVOICE PRINT CALCULATOR
+// ==========================================
+
+// Paper size and weight unit cost values
+const PAPER_COSTS = {
+    a4_200: 1.5,
+    a4_300: 2.0,
+    a3_200: 3.0,
+    a3_300: 4.0,
+    landscape_200: 4.0,
+    color_80: 0.9,
+    gray_80: 0.45
+};
+
+function getInvoiceTotal() {
+    const q_a4_200 = parseInt(document.getElementById("calc-a4-200").value) || 0;
+    const q_a4_300 = parseInt(document.getElementById("calc-a4-300").value) || 0;
+    const q_a3_200 = parseInt(document.getElementById("calc-a3-200").value) || 0;
+    const q_a3_300 = parseInt(document.getElementById("calc-a3-300").value) || 0;
+    const q_land_200 = parseInt(document.getElementById("calc-landscape-200").value) || 0;
+    const q_col_80 = parseInt(document.getElementById("calc-color-80").value) || 0;
+    const q_gray_80 = parseInt(document.getElementById("calc-gray-80").value) || 0;
+
+    return (q_a4_200 * PAPER_COSTS.a4_200) +
+           (q_a4_300 * PAPER_COSTS.a4_300) +
+           (q_a3_200 * PAPER_COSTS.a3_200) +
+           (q_a3_300 * PAPER_COSTS.a3_300) +
+           (q_land_200 * PAPER_COSTS.landscape_200) +
+           (q_col_80 * PAPER_COSTS.color_80) +
+           (q_gray_80 * PAPER_COSTS.gray_80);
+}
+
+function recalculateInvoice() {
+    const q_a4_200 = parseInt(document.getElementById("calc-a4-200").value) || 0;
+    const q_a4_300 = parseInt(document.getElementById("calc-a4-300").value) || 0;
+    const q_a3_200 = parseInt(document.getElementById("calc-a3-200").value) || 0;
+    const q_a3_300 = parseInt(document.getElementById("calc-a3-300").value) || 0;
+    const q_land_200 = parseInt(document.getElementById("calc-landscape-200").value) || 0;
+    const q_col_80 = parseInt(document.getElementById("calc-color-80").value) || 0;
+    const q_gray_80 = parseInt(document.getElementById("calc-gray-80").value) || 0;
+
+    const total = getInvoiceTotal();
+    
+    // Formats textual invoice summary (similar to VBA details text generator)
+    let text = "====================================\n";
+    text += "       PRINTING INVOICE DETAILS     \n";
+    text += "====================================\n";
+    
+    if (q_a4_200 > 0) text += `A4 200gm:   ${q_a4_200} pcs x ${PAPER_COSTS.a4_200} = ${(q_a4_200 * PAPER_COSTS.a4_200).toFixed(2)} L.E\n`;
+    if (q_a4_300 > 0) text += `A4 300gm:   ${q_a4_300} pcs x ${PAPER_COSTS.a4_300} = ${(q_a4_300 * PAPER_COSTS.a4_300).toFixed(2)} L.E\n`;
+    if (q_a3_200 > 0) text += `A3 200gm:   ${q_a3_200} pcs x ${PAPER_COSTS.a3_200} = ${(q_a3_200 * PAPER_COSTS.a3_200).toFixed(2)} L.E\n`;
+    if (q_a3_300 > 0) text += `A3 300gm:   ${q_a3_300} pcs x ${PAPER_COSTS.a3_300} = ${(q_a3_300 * PAPER_COSTS.a3_300).toFixed(2)} L.E\n`;
+    if (q_land_200 > 0) text += `Land 200gm:  ${q_land_200} pcs x ${PAPER_COSTS.landscape_200} = ${(q_land_200 * PAPER_COSTS.landscape_200).toFixed(2)} L.E\n`;
+    if (q_col_80 > 0) text += `Color 80gm: ${q_col_80} pcs x ${PAPER_COSTS.color_80} = ${(q_col_80 * PAPER_COSTS.color_80).toFixed(2)} L.E\n`;
+    if (q_gray_80 > 0) text += `Gray 80gm:  ${q_gray_80} pcs x ${PAPER_COSTS.gray_80} = ${(q_gray_80 * PAPER_COSTS.gray_80).toFixed(2)} L.E\n`;
+    
+    text += "------------------------------------\n";
+    text += `TOTAL BILL AMOUNT:     ${total.toFixed(2)} L.E\n`;
+    text += "====================================\n";
+    
+    document.getElementById("calc-result-text").value = text;
+    
+    // Updates active USSD phone codes with invoice total values
+    const currentUSSD = document.getElementById("ussd-output").value;
+    const phonePart = currentUSSD.split("*")[3] || "phone";
+    updateUSSDCode(phonePart, total);
+}
+
+function updateUSSDCode(phone, amount) {
+    const formattedAmount = (amount || 0).toFixed(2);
+    document.getElementById("ussd-output").value = `*9*7*${phone}*${formattedAmount}#`;
+}
+
+// ==========================================
+// EXPENSES SUBMISSION
+// ==========================================
+async function loadExpenses() {
+    if (currentRole !== "admin") return;
+    try {
+        // Load table rows
+        const res = await fetchSecure(`${API_BASE}/expenses`);
+        const expenses = await res.json();
+        
+        const body = document.getElementById("expenses-list-body");
+        body.innerHTML = expenses.map(e => {
+            const dateStr = e.due_date ? new Date(e.due_date).toLocaleDateString() : "-";
+            return `
+                <tr>
+                    <td>${escapeHTML(e.name)}</td>
+                    <td><span class="badge badge-next">${e.category}</span></td>
+                    <td>${e.amount.toFixed(2)} L.E</td>
+                    <td>${dateStr}</td>
+                    <td style="color: var(--text-muted); font-size: 0.85rem;">${escapeHTML(e.comment || "-")}</td>
+                </tr>
+            `;
+        }).join("");
+        
+        // Load category aggregate sums
+        const catRes = await fetchSecure(`${API_BASE}/expenses/categories`);
+        const categories = await catRes.json();
+        
+        const catContainer = document.getElementById("category-totals-container");
+        catContainer.innerHTML = categories.map(c => `
+            <div class="category-summary-card">
+                <span class="category-sum-val">${c.total.toFixed(2)}</span>
+                <span class="category-sum-name">${c.category}</span>
+            </div>
+        `).join("");
+        
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function handleExpenseSubmit(e) {
+    e.preventDefault();
+    
+    const payload = {
+        name: document.getElementById("exp-name").value.trim(),
+        amount: parseFloat(document.getElementById("exp-amount").value) || 0.0,
+        category: document.getElementById("exp-category").value,
+        comment: document.getElementById("exp-comment").value.trim()
+    };
+    
+    try {
+        const res = await fetchSecure(`${API_BASE}/expenses`, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        
+        if (res.ok) {
+            showToast("Expense record added.", "success");
+            document.getElementById("expense-add-form").reset();
+            loadExpenses();
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// ==========================================
+// UTILITIES: TOASTS, ESCAPING, DEBOUNCING
+// ==========================================
+function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.className = `toast ${type}`;
+    toast.classList.remove("hidden");
+    
+    setTimeout(() => {
+        toast.classList.add("hidden");
+    }, 4000);
+}
+
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+    );
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
