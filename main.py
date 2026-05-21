@@ -507,14 +507,19 @@ def get_package_status(session: Session = Depends(get_session)):
         select(Package).order_by(Package.start_date.desc())
     ).first()
     
-    if not latest_package:
+    if not latest_package or not latest_package.start_date:
         return {"days_elapsed": 999, "last_date": None}
         
-    delta = datetime.now() - latest_package.start_date
+    start_date = latest_package.start_date
+    if start_date.tzinfo is not None:
+        start_date = start_date.replace(tzinfo=None)
+        
+    delta = datetime.now() - start_date
     return {
         "days_elapsed": delta.days,
         "last_date": latest_package.start_date
     }
+
 
 @app.post("/api/package/start", response_model=Package, dependencies=[Depends(verify_admin)])
 def start_new_package(session: Session = Depends(get_session)):
