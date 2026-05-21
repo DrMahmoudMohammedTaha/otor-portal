@@ -9,6 +9,7 @@ const API_BASE = "/api";
 let currentRole = null;
 let sessionToken = null;
 let loggedSheikhId = null;
+let currentSheikhsLoadId = 0;
 
 // ==========================================
 // Session Handling Functions
@@ -18,7 +19,7 @@ function getSession() {
     currentRole = localStorage.getItem("otor_role");
     const sheikhIdRaw = localStorage.getItem("otor_sheikh_id");
     loggedSheikhId = sheikhIdRaw ? parseInt(sheikhIdRaw, 10) : null;
-    return !!sessionToken;
+    return !!sessionToken || currentRole === "guest";
 }
 
 function saveSession(token, role, name, sheikhId) {
@@ -91,15 +92,20 @@ function initApp() {
 function applyRoleInterface() {
     const adminNav = document.getElementById("admin-nav");
     const sheikhNav = document.getElementById("sheikh-nav");
+    const guestNav = document.getElementById("guest-nav");
     const packageBadge = document.getElementById("package-badge-container");
     
     // Default resets
+    adminNav.classList.add("hidden");
+    sheikhNav.classList.add("hidden");
+    if (guestNav) guestNav.classList.add("hidden");
+    packageBadge.classList.add("hidden");
+    
     document.querySelectorAll(".page-section").forEach(s => s.classList.remove("active"));
     document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
     
     if (currentRole === "admin") {
         adminNav.classList.remove("hidden");
-        sheikhNav.classList.add("hidden");
         packageBadge.classList.remove("hidden");
         
         // Show first admin page (orders)
@@ -112,9 +118,7 @@ function applyRoleInterface() {
         loadPackageTimer();
         loadExpenses();
     } else if (currentRole === "sheikh") {
-        adminNav.classList.add("hidden");
         sheikhNav.classList.remove("hidden");
-        packageBadge.classList.add("hidden"); // Hide print run package timer from sheikhs
         
         // Show sheikh portal
         document.getElementById("sheikh-portal-page").classList.add("active");
@@ -122,6 +126,18 @@ function applyRoleInterface() {
         
         // Load sheikh database records
         loadSheikhPortal();
+    } else if (currentRole === "guest") {
+        if (guestNav) guestNav.classList.remove("hidden");
+        
+        // Show gallery showroom
+        document.getElementById("gallery-page").classList.add("active");
+        const navGalleryGuest = document.getElementById("nav-gallery-guest");
+        if (navGalleryGuest) navGalleryGuest.classList.add("active");
+        
+        // Load default gallery category
+        const activeCategoryTab = document.querySelector("#gallery-category-tabs .tab-item.active");
+        const defaultCategory = activeCategoryTab ? activeCategoryTab.getAttribute("data-category") : "1_ejaza";
+        loadGallery(defaultCategory);
     }
 }
 
@@ -185,6 +201,15 @@ function setupEventListeners() {
         }
     });
 
+    const btnGalleryAccess = document.getElementById("btn-gallery-access");
+    if (btnGalleryAccess) {
+        btnGalleryAccess.addEventListener("click", () => {
+            saveSession("", "guest", "Guest Viewer", "");
+            initApp();
+            showToast("Accessed Showcase Gallery as Guest.");
+        });
+    }
+
     // ------------------------------------------
     // Global Navigation & Logout
     // ------------------------------------------
@@ -204,6 +229,11 @@ function setupEventListeners() {
             if (targetPage === "sheikhs-page") loadSheikhs();
             if (targetPage === "expenses-page") loadExpenses();
             if (targetPage === "sheikh-portal-page") loadSheikhPortal();
+            if (targetPage === "gallery-page") {
+                const activeCategoryTab = document.querySelector("#gallery-category-tabs .tab-item.active");
+                const category = activeCategoryTab ? activeCategoryTab.getAttribute("data-category") : "1_ejaza";
+                loadGallery(category);
+            }
         });
     });
     
@@ -340,6 +370,127 @@ function setupEventListeners() {
             console.error(e);
         }
     });
+
+    // ------------------------------------------
+    // Showcase Gallery category tab switching
+    // ------------------------------------------
+    const galleryTabsList = document.getElementById("gallery-category-tabs");
+    if (galleryTabsList) {
+        galleryTabsList.querySelectorAll(".tab-item").forEach(tab => {
+            tab.addEventListener("click", () => {
+                galleryTabsList.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
+                tab.classList.add("active");
+                const category = tab.getAttribute("data-category");
+                loadGallery(category);
+            });
+        });
+    }
+
+    // ------------------------------------------
+    // Fullscreen Gallery Viewer Handlers
+    // ------------------------------------------
+    const closeBtn = document.getElementById("btn-close-gallery-viewer");
+    const viewerModal = document.getElementById("gallery-viewer-modal");
+    if (closeBtn && viewerModal) {
+        const closeViewer = () => {
+            viewerModal.classList.add("hidden");
+            document.getElementById("gallery-viewer-img").src = "";
+        };
+        closeBtn.addEventListener("click", closeViewer);
+        viewerModal.addEventListener("click", (e) => {
+            if (e.target === viewerModal || e.target === closeBtn) {
+                closeViewer();
+            }
+        });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && !viewerModal.classList.contains("hidden")) {
+                closeViewer();
+            }
+        });
+    }
+
+
+    // ------------------------------------------
+    // Active Orders Search Handler
+    // ------------------------------------------
+    const ordersSearchInput = document.getElementById("orders-search-input");
+    if (ordersSearchInput) {
+        ordersSearchInput.addEventListener("input", debounce(loadOrders, 300));
+    }
+
+    // ------------------------------------------
+    // Sheikh Details View Modals & Tabs Handlers
+    // ------------------------------------------
+    const closeSheikhDetailsBtn = document.getElementById("btn-close-sheikh-details");
+    if (closeSheikhDetailsBtn) {
+        closeSheikhDetailsBtn.addEventListener("click", closeSheikhDetailsModal);
+    }
+
+    const sheikhDetailsModal = document.getElementById("sheikh-details-modal");
+    if (sheikhDetailsModal) {
+        sheikhDetailsModal.addEventListener("click", (e) => {
+            if (e.target === sheikhDetailsModal) {
+                closeSheikhDetailsModal();
+            }
+        });
+    }
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            const m = document.getElementById("sheikh-details-modal");
+            if (m && !m.classList.contains("hidden")) {
+                closeSheikhDetailsModal();
+            }
+        }
+    });
+
+    const tabSheikhGeneral = document.getElementById("sheikh-tab-general");
+    const tabSheikhActive = document.getElementById("sheikh-tab-active-orders-btn");
+    const tabSheikhHistory = document.getElementById("sheikh-tab-history-orders-btn");
+
+    const panelSheikhGeneral = document.getElementById("sheikh-tab-general-content");
+    const panelSheikhActive = document.getElementById("sheikh-tab-active-orders-content");
+    const panelSheikhHistory = document.getElementById("sheikh-tab-history-orders-content");
+
+    if (tabSheikhGeneral && tabSheikhActive && tabSheikhHistory) {
+        tabSheikhGeneral.addEventListener("click", () => {
+            tabSheikhGeneral.classList.add("active");
+            tabSheikhActive.classList.remove("active");
+            tabSheikhHistory.classList.remove("active");
+            
+            panelSheikhGeneral.classList.add("active");
+            panelSheikhActive.classList.remove("active");
+            panelSheikhHistory.classList.remove("active");
+        });
+        
+        tabSheikhActive.addEventListener("click", () => {
+            tabSheikhGeneral.classList.remove("active");
+            tabSheikhActive.classList.add("active");
+            tabSheikhHistory.classList.remove("active");
+            
+            panelSheikhGeneral.classList.remove("active");
+            panelSheikhActive.classList.add("active");
+            panelSheikhHistory.classList.remove("active");
+        });
+        
+        tabSheikhHistory.addEventListener("click", () => {
+            tabSheikhGeneral.classList.remove("active");
+            tabSheikhActive.classList.remove("active");
+            tabSheikhHistory.classList.add("active");
+            
+            panelSheikhGeneral.classList.remove("active");
+            panelSheikhActive.classList.remove("active");
+            panelSheikhHistory.classList.add("active");
+        });
+    }
+
+    // ------------------------------------------
+    // Sheikh dedicated profile button handler
+    // ------------------------------------------
+    const btnSheikhProfile = document.getElementById("btn-sheikh-my-profile");
+    if (btnSheikhProfile) {
+        btnSheikhProfile.addEventListener("click", showLoggedSheikhProfile);
+    }
 }
 
 // ==========================================
@@ -570,19 +721,39 @@ async function loadSheikhs() {
     const queryVal = document.getElementById("sheikhs-search-input").value.trim();
     const url = queryVal ? `${API_BASE}/sheikhs?search=${encodeURIComponent(queryVal)}` : `${API_BASE}/sheikhs`;
     
+    const loadId = ++currentSheikhsLoadId;
+    
     try {
         const res = await fetchSecure(url);
         const sheikhs = await res.json();
         
+        // Fetch all stats in parallel
+        const sheikhsWithStats = await Promise.all(sheikhs.map(async s => {
+            try {
+                const statsRes = await fetchSecure(`${API_BASE}/sheikhs/${s.id}/stats`);
+                const stats = await statsRes.json();
+                return { s, stats };
+            } catch (err) {
+                console.error("Error loading stats for sheikh " + s.id, err);
+                return { s, stats: { total_historical_cost: 0, total_historical_items: 0, active_orders_count: 0 } };
+            }
+        }));
+        
+        // If another load has started since, discard these results
+        if (loadId !== currentSheikhsLoadId) return;
+        
         const body = document.getElementById("sheikhs-list-body");
         body.innerHTML = "";
         
-        // Loop and load aggregate metrics asynchronously
-        for (const s of sheikhs) {
-            const statsRes = await fetchSecure(`${API_BASE}/sheikhs/${s.id}/stats`);
-            const stats = await statsRes.json();
-            
+        sheikhsWithStats.forEach(({ s, stats }) => {
             const tr = document.createElement("tr");
+            tr.style.cursor = "pointer";
+            tr.onclick = (e) => {
+                // If clicked on an action button, don't open details modal
+                if (e.target.closest("button") || e.target.closest("svg")) return;
+                showSheikhDetailsModal(s, stats);
+            };
+            
             tr.innerHTML = `
                 <td>#${s.id}</td>
                 <td>
@@ -596,18 +767,18 @@ async function loadSheikhs() {
                 <td>${stats.total_historical_items} plates</td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn btn-details" onclick="openSystemSheikhFolder('${s.name}')" title="Open Local Storage Folder">
+                        <button class="action-btn btn-details" onclick="event.stopPropagation(); openSystemSheikhFolder('${s.name}')" title="Open Local Storage Folder">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                             </svg>
                         </button>
-                        <button class="action-btn" onclick="openSheikhFormModal(${s.id})" title="Edit Info">
+                        <button class="action-btn" onclick="event.stopPropagation(); openSheikhFormModal(${s.id})" title="Edit Info">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button class="action-btn btn-delete" onclick="handleDeleteSheikh(${s.id})" title="Delete Partner">
+                        <button class="action-btn btn-delete" onclick="event.stopPropagation(); handleDeleteSheikh(${s.id})" title="Delete Partner">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -619,7 +790,7 @@ async function loadSheikhs() {
                 </td>
             `;
             body.appendChild(tr);
-        }
+        });
         
     } catch (e) {
         console.error(e);
@@ -985,6 +1156,163 @@ function closeSheikhFormModal() {
     document.getElementById("sheikh-form-modal").classList.add("hidden");
 }
 
+async function showSheikhDetailsModal(sheikh, stats) {
+    // 1. Reset tabs to General Info active
+    const tabGen = document.getElementById("sheikh-tab-general");
+    if (tabGen) tabGen.click();
+    
+    // 2. Set basic header details
+    document.getElementById("sheikh-det-name").textContent = sheikh.name;
+    document.getElementById("sheikh-det-phone-city").textContent = `${sheikh.phone || "No Phone"} | ${sheikh.city || "No City"}`;
+    
+    // 3. Set avatar icon based on gender
+    const avatarIcon = document.getElementById("sheikh-det-avatar-icon");
+    if (avatarIcon) {
+        avatarIcon.textContent = sheikh.gender ? "👳" : "🧕";
+    }
+    
+    // 4. Set Call phone URL
+    const callBtn = document.getElementById("sheikh-det-call-btn");
+    if (callBtn) {
+        if (sheikh.phone) {
+            callBtn.href = `tel:${sheikh.phone}`;
+            callBtn.style.display = "inline-flex";
+        } else {
+            callBtn.style.display = "none";
+        }
+    }
+    
+    // 5. Populate Stats Grid
+    document.getElementById("sheikh-det-stat-cost").textContent = `${stats.total_historical_cost.toFixed(2)} L.E`;
+    document.getElementById("sheikh-det-stat-items").textContent = `${stats.total_historical_items} plates`;
+    document.getElementById("sheikh-det-stat-active").textContent = stats.active_orders_count;
+    
+    // 6. Populate General Info Fields
+    document.getElementById("sheikh-det-receiver").textContent = sheikh.receiver_name || "-";
+    document.getElementById("sheikh-det-country").textContent = sheikh.country || "-";
+    document.getElementById("sheikh-det-city").textContent = sheikh.city || "-";
+    document.getElementById("sheikh-det-address").textContent = sheikh.address || "-";
+    document.getElementById("sheikh-det-info").textContent = sheikh.info || "No educational remarks recorded.";
+    document.getElementById("sheikh-det-comment").textContent = sheikh.comment || "No internal comments.";
+    
+    // 7. Load Active & History Orders in parallel
+    const activeBody = document.getElementById("sheikh-det-active-orders-body");
+    const historyBody = document.getElementById("sheikh-det-history-orders-body");
+    
+    activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading active orders...</td></tr>`;
+    historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading order history...</td></tr>`;
+    
+    // Clear badges
+    document.getElementById("sheikh-det-active-badge").textContent = "0";
+    document.getElementById("sheikh-det-history-badge").textContent = "0";
+    
+    // Show modal first so user sees it loading
+    document.getElementById("sheikh-details-modal").classList.remove("hidden");
+    
+    try {
+        const [resActive, resHistory] = await Promise.all([
+            fetchSecure(`${API_BASE}/orders?sheikh_id=${sheikh.id}`),
+            fetchSecure(`${API_BASE}/orders/history?sheikh_id=${sheikh.id}`)
+        ]);
+        
+        const activeOrders = await resActive.json();
+        const historyOrders = await resHistory.json();
+        
+        // Update tab badges
+        document.getElementById("sheikh-det-active-badge").textContent = activeOrders.length;
+        document.getElementById("sheikh-det-history-badge").textContent = historyOrders.length;
+        
+        // Render Active Orders
+        activeBody.innerHTML = "";
+        if (activeOrders.length === 0) {
+            activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No active orders.</td></tr>`;
+        } else {
+            activeOrders.forEach(o => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>#${o.id}</td>
+                    <td>${escapeHTML(o.contents || "-")}</td>
+                    <td>${o.cost.toFixed(2)}</td>
+                    <td>${o.paid.toFixed(2)}</td>
+                    <td class="${o.rest > 0 ? 'text-danger' : 'text-success'}">${o.rest.toFixed(2)}</td>
+                    <td>${o.degree}</td>
+                    <td><span class="badge badge-${o.state.toLowerCase()}">${o.state}</span></td>
+                    <td>
+                        <button class="action-btn btn-details" onclick="event.stopPropagation(); closeSheikhDetailsModal(); showOrderDetails(${o.id})" title="View Details">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                activeBody.appendChild(tr);
+            });
+        }
+        
+        // Render History Orders
+        historyBody.innerHTML = "";
+        if (historyOrders.length === 0) {
+            historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No completed orders.</td></tr>`;
+        } else {
+            historyOrders.forEach(o => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>#${o.id}</td>
+                    <td>${escapeHTML(o.contents || "-")}</td>
+                    <td>${o.cost.toFixed(2)}</td>
+                    <td>${o.paid.toFixed(2)}</td>
+                    <td class="${o.rest > 0 ? 'text-danger' : 'text-success'}">${o.rest.toFixed(2)}</td>
+                    <td>${o.degree}</td>
+                    <td><span class="badge badge-deliver">DONE</span></td>
+                    <td>
+                        <button class="action-btn btn-details" onclick="event.stopPropagation(); closeSheikhDetailsModal(); showOrderDetails(${o.id})" title="View Details">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                historyBody.appendChild(tr);
+            });
+        }
+        
+    } catch (e) {
+        console.error("Error loading sheikh orders inside details modal", e);
+        activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">Failed to load active orders.</td></tr>`;
+        historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">Failed to load order history.</td></tr>`;
+    }
+}
+
+function closeSheikhDetailsModal() {
+    document.getElementById("sheikh-details-modal").classList.add("hidden");
+}
+
+async function showLoggedSheikhProfile() {
+    if (!loggedSheikhId) return;
+    try {
+        const [resSheikh, resStats] = await Promise.all([
+            fetchSecure(`${API_BASE}/sheikhs/${loggedSheikhId}`),
+            fetchSecure(`${API_BASE}/sheikhs/${loggedSheikhId}/stats`)
+        ]);
+        if (resSheikh.ok && resStats.ok) {
+            const sheikh = await resSheikh.json();
+            const stats = await resStats.json();
+            showSheikhDetailsModal(sheikh, stats);
+        } else {
+            showToast("Failed to load profile details.", "error");
+        }
+    } catch (e) {
+        console.error("Error loading profile info", e);
+        showToast("Failed to load profile details.", "error");
+    }
+}
+
+
+
 async function handleSheikhSubmit(e) {
     e.preventDefault();
     const id = document.getElementById("sheikh-form-id").value;
@@ -1202,4 +1530,52 @@ function debounce(func, wait) {
         clearTimeout(timeout);
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
+}
+
+async function loadGallery(category) {
+    const grid = document.getElementById("gallery-grid");
+    if (!grid) return;
+    grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--text-secondary); padding: 2rem;">Loading gallery items...</div>`;
+    
+    try {
+        const res = await fetch(`/api/gallery/${category}`);
+        if (!res.ok) {
+            throw new Error("Failed to load gallery category");
+        }
+        const images = await res.json();
+        
+        grid.innerHTML = "";
+        if (images.length === 0) {
+            grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--text-muted); padding: 2rem;">No design previews available in this category.</div>`;
+            return;
+        }
+        
+        images.forEach(filename => {
+            const card = document.createElement("div");
+            card.className = "gallery-card";
+            
+            const cleanName = escapeHTML(filename);
+            
+            card.innerHTML = `
+                <div class="gallery-img-wrapper">
+                    <img class="gallery-img" src="/static/gallery/${category}/${filename}" alt="${cleanName}" loading="lazy">
+                </div>
+                <div class="gallery-card-info" title="${cleanName}">${cleanName}</div>
+            `;
+            
+            card.addEventListener("click", () => {
+                const viewerModal = document.getElementById("gallery-viewer-modal");
+                const viewerImg = document.getElementById("gallery-viewer-img");
+                if (viewerModal && viewerImg) {
+                    viewerImg.src = `/static/gallery/${category}/${filename}`;
+                    viewerModal.classList.remove("hidden");
+                }
+            });
+            
+            grid.appendChild(card);
+        });
+    } catch (e) {
+        console.error(e);
+        grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--color-danger); padding: 2rem;">Error loading gallery images.</div>`;
+    }
 }

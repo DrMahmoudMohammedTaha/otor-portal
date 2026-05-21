@@ -108,6 +108,18 @@ def login(payload: LoginRequest, session: Session = Depends(get_session)):
         
     raise HTTPException(status_code=400, detail="Invalid role specified.")
 
+# Helper to normalize Arabic letters for robust search
+def normalize_arabic_str(s: str) -> str:
+    if not s:
+        return ""
+    # Normalize Hamzas
+    s = s.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+    # Normalize Ta Marbuta
+    s = s.replace("ة", "ه")
+    # Normalize Alef Maksura
+    s = s.replace("ى", "ي")
+    return s
+
 # ==========================================
 # API Routes: Sheikhs
 # ==========================================
@@ -117,10 +129,23 @@ def list_sheikhs(
     session: Session = Depends(get_session)
 ):
     query = select(Sheikh)
-    if search:
-        query = query.where(Sheikh.name.ilike(f"%{search}%"))
     query = query.order_by(Sheikh.name)
-    return session.exec(query).all()
+    sheikhs = session.exec(query).all()
+    
+    if search:
+        search_norm = normalize_arabic_str(search).lower()
+        filtered = []
+        for s in sheikhs:
+            name_norm = normalize_arabic_str(s.name or "").lower()
+            phone_norm = normalize_arabic_str(s.phone or "").lower()
+            city_norm = normalize_arabic_str(s.city or "").lower()
+            if (search_norm in name_norm or 
+                search_norm in phone_norm or 
+                search_norm in city_norm):
+                filtered.append(s)
+        return filtered
+        
+    return sheikhs
 
 @app.get("/api/sheikhs/{id}", response_model=Sheikh)
 def get_sheikh(id: int, session: Session = Depends(get_session)):
@@ -128,6 +153,7 @@ def get_sheikh(id: int, session: Session = Depends(get_session)):
     if not sheikh:
         raise HTTPException(status_code=404, detail="Sheikh not found")
     return sheikh
+
 
 @app.get("/api/sheikhs/{id}/stats")
 def get_sheikh_stats(id: int, session: Session = Depends(get_session)):
@@ -215,6 +241,7 @@ def delete_sheikh(id: int, session: Session = Depends(get_session)):
 def list_orders(
     state: str = "ALL", 
     sheikh_id: Optional[int] = None,  # Filter for role-based view
+    search: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
     query = select(Orders)
@@ -230,12 +257,28 @@ def list_orders(
     orders_with_sheikh = []
     for order in orders_list:
         sheikh = session.get(Sheikh, order.sheikh_id) if order.sheikh_id else None
+        
+        # Apply search filtering in memory if query is provided
+        if search:
+            search_norm = normalize_arabic_str(search).lower()
+            name_norm = normalize_arabic_str(order.sheikh_name or "").lower()
+            phone_norm = normalize_arabic_str(order.p_phone or (sheikh.phone if sheikh else "")).lower()
+            city_norm = normalize_arabic_str(order.p_city or (sheikh.city if sheikh else "")).lower()
+            content_norm = normalize_arabic_str(order.contents or "").lower()
+            
+            if (search_norm not in name_norm and
+                search_norm not in phone_norm and
+                search_norm not in city_norm and
+                search_norm not in content_norm):
+                continue
+                
         order_dict = order.model_dump()
         order_dict["sheikh_phone"] = sheikh.phone if sheikh else ""
         order_dict["sheikh_city"] = sheikh.city if sheikh else ""
         orders_with_sheikh.append(order_dict)
         
     return orders_with_sheikh
+
 
 @app.get("/api/orders/history")
 def list_order_history(
@@ -556,6 +599,29 @@ def open_sheikh_folder(payload: FolderOpenRequest):
             detail=f"Failed to launch explorer: {e}"
         )
 
+
+
+# ==========================================
+# API Routes: Gallery Catalog
+# ==========================================
+@app.get("/api/gallery/{category}")
+def list_gallery_images(category: str):
+    allowed_categories = ["1_ejaza", "2_background", "3_cover", "4_certificate", "5_tree", "6_stamp"]
+    if category not in allowed_categories:
+        raise HTTPException(status_code=400, detail="Invalid gallery category.")
+        
+    gallery_dir = os.path.join(os.path.dirname(__file__), "static", "gallery", category)
+    if not os.path.exists(gallery_dir):
+        return []
+        
+    try:
+        images = [
+            f for f in os.listdir(gallery_dir)
+            if os.path.isfile(os.path.join(gallery_dir, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'))
+        ]
+        return sorted(images)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ==========================================

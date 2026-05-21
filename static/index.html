@@ -18,41 +18,48 @@
     LOGIN SCREEN OVERLAY
     ========================================== -->
     <div id="login-overlay" class="login-overlay">
-        <div class="login-card">
-            <div class="brand" style="justify-content: center; margin-bottom: 1.5rem;">
-                <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 3v19M5 12h14M12 3L5 12m7-9l7 9" />
-                </svg>
-                <span class="brand-title">OTOR Portal</span>
-            </div>
-            
-            <h2 class="login-heading">Welcome Back</h2>
-            <p class="login-subheading">Select your portal workspace credential</p>
-            
-            <div class="role-selector">
-                <label class="role-option" id="label-role-admin">
-                    <input type="radio" name="login-role" value="admin" checked>
-                    <span>System Admin</span>
-                </label>
-                <label class="role-option" id="label-role-sheikh">
-                    <input type="radio" name="login-role" value="sheikh">
-                    <span>Partner Sheikh</span>
-                </label>
-            </div>
-            
-            <form id="login-form">
-                <div class="form-group" id="login-password-group">
-                    <label for="login-password">System Admin Passcode</label>
-                    <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+        <div class="login-container">
+            <div class="login-banner" style="background-image: url('/static/images/ejaza1.jpg');"></div>
+            <div class="login-form-side">
+                <div class="brand" style="justify-content: center; margin-bottom: 1rem;">
+                    <svg class="brand-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 3v19M5 12h14M12 3L5 12m7-9l7 9" />
+                    </svg>
+                    <span class="brand-title">عطور القرآن</span>
                 </div>
                 
-                <div class="form-group hidden" id="login-phone-group">
-                    <label for="login-phone">Registered Contact Phone</label>
-                    <input type="text" id="login-phone" class="form-control" placeholder="e.g. 01011112222">
+                <h2 class="login-heading">Welcome Back</h2>
+                <p class="login-subheading">Select your portal workspace credential</p>
+                
+                <div class="role-selector">
+                    <label class="role-option" id="label-role-admin">
+                        <input type="radio" name="login-role" value="admin" checked>
+                        <span>System Admin</span>
+                    </label>
+                    <label class="role-option" id="label-role-sheikh">
+                        <input type="radio" name="login-role" value="sheikh">
+                        <span>Partner Sheikh</span>
+                    </label>
                 </div>
                 
-                <button type="submit" class="btn btn-primary w-full" style="margin-top: 1.25rem;">Access Dashboard</button>
-            </form>
+                <form id="login-form">
+                    <div class="form-group" id="login-password-group">
+                        <label for="login-password">System Admin Passcode</label>
+                        <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+                    </div>
+                    
+                    <div class="form-group hidden" id="login-phone-group">
+                        <label for="login-phone">Registered Contact Phone</label>
+                        <input type="text" id="login-phone" class="form-control" placeholder="e.g. 01011112222">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-full" style="margin-top: 1rem;">Access Dashboard</button>
+                </form>
+                
+                <div class="login-divider"><span>OR</span></div>
+                
+                <button type="button" id="btn-gallery-access" class="btn btn-secondary w-full">Access Showcase Gallery</button>
+            </div>
         </div>
     </div>
 
@@ -101,6 +108,14 @@
                     </svg>
                     <span>Expenses</span>
                 </a>
+                <a href="#" class="nav-item" data-page="gallery-page" id="nav-gallery-admin">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>Gallery Showcase</span>
+                </a>
             </nav>
 
             <!-- SHEIKH MENU -->
@@ -113,6 +128,26 @@
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
                     <span>My Certificates</span>
+                </a>
+                <a href="#" class="nav-item" data-page="gallery-page" id="nav-gallery-sheikh">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>Gallery Showcase</span>
+                </a>
+            </nav>
+
+            <!-- GUEST MENU -->
+            <nav class="nav-menu hidden" id="guest-nav">
+                <a href="#" class="nav-item active" data-page="gallery-page" id="nav-gallery-guest">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>Gallery Showroom</span>
                 </a>
             </nav>
             
@@ -154,6 +189,10 @@
                         <span>New Order</span>
                     </button>
                 </header>
+
+                <div class="search-bar" style="margin-bottom: 1.5rem;">
+                    <input type="text" id="orders-search-input" placeholder="Search orders by sheikh name, phone, city, or content summary..." class="form-control">
+                </div>
 
                 <div class="tabs-container">
                     <div class="tabs-list">
@@ -383,9 +422,14 @@
             ========================================== -->
             <section id="sheikh-portal-page" class="page-section">
                 <header class="page-header">
-                    <div>
-                        <h1 class="page-title">My Quran Certifications</h1>
-                        <p class="page-subtitle" id="sheikh-portal-welcome">Welcome Sheikh</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
+                        <div>
+                            <h1 class="page-title">My Quran Certifications</h1>
+                            <p class="page-subtitle" id="sheikh-portal-welcome">Welcome Sheikh</p>
+                        </div>
+                        <button class="btn btn-secondary" id="btn-sheikh-my-profile" style="display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px; padding: 0.5rem 1rem;">
+                            👤 <span>My Profile Info</span>
+                        </button>
                     </div>
                 </header>
 
@@ -454,6 +498,35 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+            SHOWCASE GALLERY PAGE
+            ========================================== -->
+            <section id="gallery-page" class="page-section">
+                <header class="page-header">
+                    <div>
+                        <h1 class="page-title">Showcase Gallery</h1>
+                        <p class="page-subtitle">Browse certificate designs and stamps</p>
+                    </div>
+                </header>
+                
+                <div class="tabs-container">
+                    <div class="tabs-list" id="gallery-category-tabs">
+                        <button class="tab-item active" data-category="1_ejaza">Quranic Ejazas</button>
+                        <button class="tab-item" data-category="2_background">Backgrounds</button>
+                        <button class="tab-item" data-category="3_cover">Covers</button>
+                        <button class="tab-item" data-category="4_certificate">Certificates</button>
+                        <button class="tab-item" data-category="5_tree">Lineage Trees</button>
+                        <button class="tab-item" data-category="6_stamp">Stamps</button>
+                    </div>
+                </div>
+
+                <div class="gallery-grid-container">
+                    <div id="gallery-grid" class="gallery-grid">
+                        <!-- Loaded dynamically -->
                     </div>
                 </div>
             </section>
@@ -691,7 +764,148 @@
         </div>
     </div>
 
+    <!-- ==========================================
+    MODAL 4: FULLSCREEN GALLERY VIEWER
+    ========================================== -->
+    <div id="gallery-viewer-modal" class="gallery-viewer-backdrop hidden">
+        <span class="gallery-viewer-close" id="btn-close-gallery-viewer">&times;</span>
+        <img id="gallery-viewer-img" src="" alt="Zoomed Design">
+    </div>
+
+    <!-- ==========================================
+    MODAL 5: SHEIKH DETAILS VIEW (similar to mobile app)
+    ========================================== -->
+    <div id="sheikh-details-modal" class="modal-backdrop hidden">
+        <div class="modal-container modal-large">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="sheikh-details-title">Sheikh Profile Details</h2>
+                    <p class="modal-subtitle">Full contact history, statistics, and billing logs</p>
+                </div>
+                <button class="btn-close-modal" id="btn-close-sheikh-details">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                <!-- Sheikh Info Header Card -->
+                <div class="sheikh-profile-card">
+                    <div class="sheikh-profile-avatar" id="sheikh-det-avatar-icon">👳</div>
+                    <div class="sheikh-profile-info">
+                        <h3 id="sheikh-det-name" style="font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem;">Sheikh Name</h3>
+                        <p id="sheikh-det-phone-city" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem;">Phone | City</p>
+                        <a href="#" id="sheikh-det-call-btn" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 20px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                            <span>Call Sheikh</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="sheikh-details-stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0;">
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Total Spending</div>
+                        <div id="sheikh-det-stat-cost" style="font-size: 1.3rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">0.00 L.E</div>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Total Plates</div>
+                        <div id="sheikh-det-stat-items" style="font-size: 1.3rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">0</div>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Active Orders</div>
+                        <div id="sheikh-det-stat-active" style="font-size: 1.3rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">0</div>
+                    </div>
+                </div>
+
+                <!-- Subtabs Menu -->
+                <div class="modal-subtabs" id="sheikh-details-tabs-list">
+                    <button class="subtab-item active" id="sheikh-tab-general">Detailed Info</button>
+                    <button class="subtab-item" id="sheikh-tab-active-orders-btn">Active Orders (<span id="sheikh-det-active-badge">0</span>)</button>
+                    <button class="subtab-item" id="sheikh-tab-history-orders-btn">Order History (<span id="sheikh-det-history-badge">0</span>)</button>
+                </div>
+
+                <!-- Tab content 1: General Info -->
+                <div id="sheikh-tab-general-content" class="subtab-content active">
+                    <div class="details-sheikh-grid" style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                        <div class="sheikh-info-block" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1.5rem;">
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: var(--color-primary); display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.50rem;">
+                                📍 Contact & Shipping Details
+                            </h4>
+                            <div class="sheikh-meta-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem 1.5rem;">
+                                <div><strong style="color: var(--text-secondary);">Receiver Name:</strong> <span id="sheikh-det-receiver" style="margin-left: 0.25rem;">-</span></div>
+                                <div><strong style="color: var(--text-secondary);">Country:</strong> <span id="sheikh-det-country" style="margin-left: 0.25rem;">-</span></div>
+                                <div><strong style="color: var(--text-secondary);">City/Province:</strong> <span id="sheikh-det-city" style="margin-left: 0.25rem;">-</span></div>
+                                <div style="grid-column: span 2;"><strong style="color: var(--text-secondary);">Full Delivery Address:</strong> <span id="sheikh-det-address" style="margin-left: 0.25rem; display: block; margin-top: 0.25rem;">-</span></div>
+                            </div>
+                        </div>
+
+                        <div class="sheikh-info-block" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1.5rem;">
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: var(--color-primary); display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.50rem;">
+                                🎓 Educational Profile & Comments
+                            </h4>
+                            <div style="margin-bottom: 1rem;">
+                                <strong style="color: var(--text-secondary);">Qualifications (Qeraat, etc.):</strong>
+                                <p id="sheikh-det-info" style="margin-top: 0.5rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; font-size: 0.9rem; background: rgba(0,0,0,0.15); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">-</p>
+                            </div>
+                            <div>
+                                <strong style="color: var(--text-secondary);">Institute Remarks (Internal):</strong>
+                                <p id="sheikh-det-comment" style="margin-top: 0.5rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; font-size: 0.9rem; background: rgba(0,0,0,0.15); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab content 2: Active Orders -->
+                <div id="sheikh-tab-active-orders-content" class="subtab-content">
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Content</th>
+                                    <th>Cost</th>
+                                    <th>Paid</th>
+                                    <th>Rest</th>
+                                    <th>Degree</th>
+                                    <th>State</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sheikh-det-active-orders-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab content 3: History Orders -->
+                <div id="sheikh-tab-history-orders-content" class="subtab-content">
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Content</th>
+                                    <th>Cost</th>
+                                    <th>Paid</th>
+                                    <th>Rest</th>
+                                    <th>Degree</th>
+                                    <th>State</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sheikh-det-history-orders-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <!-- Script Entrypoint -->
     <script src="/static/js/app.js"></script>
 </body>
 </html>
+

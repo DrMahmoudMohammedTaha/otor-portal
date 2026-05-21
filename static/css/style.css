@@ -1,42 +1,43 @@
 /* ==========================================================================
    Premium Dark Modern Glassmorphism Styling System
    Target: OTOR Quran Certification Web Portal
+   Theme: Elegant Brown & Gold
    ========================================================================== */
 
 /* Design Tokens & Theme Variables */
 :root {
     --font-primary: 'Outfit', 'Inter', sans-serif;
     
-    /* Elegant Dark Color Palette */
-    --bg-app: hsl(222, 19%, 10%);
-    --bg-sidebar: hsl(222, 19%, 8%);
-    --bg-card: hsla(222, 19%, 14%, 0.7);
-    --bg-card-hover: hsla(222, 19%, 18%, 0.9);
-    --border-glass: hsla(0, 0%, 100%, 0.08);
-    --border-glass-focus: hsla(175, 80%, 40%, 0.4);
+    /* Elegant Brown Color Palette */
+    --bg-app: hsl(28, 22%, 9%);
+    --bg-sidebar: hsl(28, 22%, 6%);
+    --bg-card: hsla(28, 22%, 14%, 0.75);
+    --bg-card-hover: hsla(28, 22%, 18%, 0.95);
+    --border-glass: hsla(38, 30%, 100%, 0.08);
+    --border-glass-focus: hsla(37, 55%, 48%, 0.4);
     
     /* Text Contrast */
-    --text-primary: hsl(0, 0%, 96%);
-    --text-secondary: hsl(218, 12%, 65%);
-    --text-muted: hsl(218, 10%, 45%);
+    --text-primary: hsl(35, 20%, 96%);
+    --text-secondary: hsl(35, 15%, 72%);
+    --text-muted: hsl(35, 12%, 50%);
     
     /* Accents & States */
-    --color-primary: hsl(175, 80%, 43%);
-    --color-primary-hover: hsl(175, 80%, 36%);
-    --color-secondary: hsl(215, 85%, 55%);
-    --color-danger: hsl(355, 85%, 55%);
-    --color-warning: hsl(38, 92%, 50%);
-    --color-success: hsl(142, 70%, 45%);
+    --color-primary: hsl(37, 55%, 48%);
+    --color-primary-hover: hsl(37, 55%, 40%);
+    --color-secondary: hsl(37, 30%, 25%);
+    --color-danger: hsl(355, 80%, 55%);
+    --color-warning: hsl(37, 90%, 50%);
+    --color-success: hsl(142, 60%, 45%);
     
     /* State Badges colors */
-    --badge-next: hsl(218, 11%, 25%);
-    --badge-design: hsl(32, 90%, 25%);
-    --badge-print: hsl(276, 70%, 28%);
-    --badge-post: hsl(205, 80%, 24%);
-    --badge-deliver: hsl(142, 72%, 18%);
+    --badge-next: hsl(28, 12%, 25%);
+    --badge-design: hsl(32, 90%, 24%);
+    --badge-print: hsl(276, 50%, 26%);
+    --badge-post: hsl(205, 60%, 22%);
+    --badge-deliver: hsl(142, 50%, 18%);
     
     /* Shadow & Radius */
-    --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --shadow-premium: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
     --radius-lg: 16px;
     --radius-md: 10px;
     --radius-sm: 6px;
@@ -103,7 +104,7 @@ body {
     width: 32px;
     height: 32px;
     color: var(--color-primary);
-    filter: drop-shadow(0 0 8px hsla(175, 80%, 43%, 0.4));
+    filter: drop-shadow(0 0 8px hsla(37, 55%, 48%, 0.4));
 }
 
 .brand-title {
@@ -292,14 +293,14 @@ body {
 
 .btn-primary {
     background-color: var(--color-primary);
-    color: hsl(222, 19%, 10%);
-    box-shadow: 0 4px 14px hsla(175, 80%, 43%, 0.3);
+    color: hsl(28, 22%, 9%);
+    box-shadow: 0 4px 14px hsla(37, 55%, 48%, 0.3);
 }
 
 .btn-primary:hover {
     background-color: var(--color-primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px hsla(175, 80%, 43%, 0.45);
+    box-shadow: 0 6px 18px hsla(37, 55%, 48%, 0.45);
 }
 
 .btn-secondary {
@@ -540,7 +541,7 @@ body {
 
 .form-control:focus {
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px hsla(175, 80%, 43%, 0.15);
+    box-shadow: 0 0 0 3px hsla(37, 55%, 48%, 0.15);
 }
 
 .form-row {
@@ -899,7 +900,7 @@ select.form-control {
 }
 
 /* ==========================================
-   ROLE-BASED LOGIN PANEL STYLING
+   ROLE-BASED LOGIN PANEL STYLING (Premium Split Design)
    ========================================== */
 .login-overlay {
     position: fixed;
@@ -908,31 +909,56 @@ select.form-control {
     right: 0;
     bottom: 0;
     background-color: var(--bg-app);
-    background-image: radial-gradient(circle at 50% 50%, hsla(175, 80%, 43%, 0.08) 0%, transparent 60%);
+    background-image: radial-gradient(circle at 50% 50%, hsla(37, 55%, 48%, 0.06) 0%, transparent 60%);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 5000;
 }
 
-.login-card {
+.login-container {
+    display: flex;
     background-color: var(--bg-card);
     border: 1px solid var(--border-glass);
     border-radius: var(--radius-lg);
-    width: 440px;
-    max-width: 90vw;
-    padding: 3rem 2.5rem;
+    width: 900px;
+    max-width: 95vw;
+    height: 520px;
+    overflow: hidden;
     box-shadow: var(--shadow-premium);
     backdrop-filter: blur(15px);
-    text-align: center;
     animation: modalSlideUp 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.login-banner {
+    flex: 1.1;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border-right: 1px solid var(--border-glass);
+}
+
+.login-banner::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(28, 22, 9, 0.1), rgba(28, 22, 9, 0.75));
+}
+
+.login-form-side {
+    flex: 0.9;
+    padding: 2.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
 }
 
 .login-heading {
     font-size: 1.8rem;
     font-weight: 800;
     margin-bottom: 0.35rem;
-    background: linear-gradient(135deg, var(--text-primary), hsl(210, 10%, 80%));
+    background: linear-gradient(135deg, var(--text-primary), hsl(35, 10%, 80%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -940,7 +966,7 @@ select.form-control {
 .login-subheading {
     font-size: 0.85rem;
     color: var(--text-secondary);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 .role-selector {
@@ -949,7 +975,7 @@ select.form-control {
     border: 1px solid var(--border-glass);
     border-radius: var(--radius-md);
     padding: 0.3rem;
-    margin-bottom: 1.75rem;
+    margin-bottom: 1.5rem;
 }
 
 .role-option {
@@ -985,4 +1011,184 @@ select.form-control {
 .role-option:has(input:checked) {
     background-color: var(--bg-card);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1rem 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.login-divider::before, .login-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+.login-divider:not(:empty)::before {
+    margin-right: .5em;
+}
+
+.login-divider:not(:empty)::after {
+    margin-left: .5em;
+}
+
+/* ==========================================
+   SHOWCASE GALLERY GRID & ZOOM
+   ========================================== */
+.gallery-grid-container {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background-color: var(--bg-sidebar);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
+}
+
+.gallery-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.gallery-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-primary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.gallery-img-wrapper {
+    width: 100%;
+    aspect-ratio: 3/4;
+    overflow: hidden;
+    background-color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gallery-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--transition-smooth);
+}
+
+.gallery-card:hover .gallery-img {
+    transform: scale(1.05);
+}
+
+.gallery-card-info {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+    border-top: 1px solid var(--border-glass);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Fullscreen zoom backdrop */
+.gallery-viewer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+.gallery-viewer-backdrop img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    animation: zoomIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes zoomIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.gallery-viewer-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 2.5rem;
+    color: #fff;
+    font-size: 3rem;
+    font-weight: 300;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.gallery-viewer-close:hover {
+    color: var(--color-primary);
+}
+
+/* ==========================================================================
+   Sheikh Profile Details Styles
+   ========================================================================== */
+.sheikh-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.sheikh-profile-avatar {
+    width: 64px;
+    height: 64px;
+    background: rgba(196, 137, 48, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    border: 2px solid var(--color-primary);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.sheikh-profile-info {
+    flex: 1;
+}
+
+.sheikh-profile-info h3 {
+    color: var(--text-primary);
+}
+
+.sheikh-details-stats-grid .calc-card {
+    transition: var(--transition-smooth);
+}
+
+.sheikh-details-stats-grid .calc-card:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: var(--border-glass-focus) !important;
+    transform: translateY(-2px);
 }
