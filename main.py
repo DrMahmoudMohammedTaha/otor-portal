@@ -552,6 +552,26 @@ def open_sheikh_folder(payload: FolderOpenRequest):
         )
 
 # ==========================================
+# Debug Route
+# ==========================================
+@app.get("/api/debug/db")
+def debug_db():
+    import traceback
+    try:
+        from database import engine
+        from sqlmodel import text
+        with engine.connect() as conn:
+            res = conn.execute(text("SELECT 1")).fetchall()
+        return {"status": "ok", "result": str(res)}
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc(),
+            "DATABASE_URL_LENGTH": len(os.getenv("DATABASE_URL") or "")
+        }
+
+# ==========================================
 # Serves Static Frontend
 # ==========================================
 @app.get("/")
