@@ -6,7 +6,7 @@
     <title>OTOR - Quran Certification Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -28,37 +28,37 @@
                     <span class="brand-title">عطور القرآن</span>
                 </div>
                 
-                <h2 class="login-heading">Welcome Back</h2>
-                <p class="login-subheading">Select your portal workspace credential</p>
+                <h2 class="login-heading" data-i18n="login_welcome">Welcome Back</h2>
+                <p class="login-subheading" data-i18n="login_select">Select your portal workspace credential</p>
                 
                 <div class="role-selector">
                     <label class="role-option" id="label-role-admin">
                         <input type="radio" name="login-role" value="admin" checked>
-                        <span>System Admin</span>
+                        <span data-i18n="login_admin_role">System Admin</span>
                     </label>
                     <label class="role-option" id="label-role-sheikh">
                         <input type="radio" name="login-role" value="sheikh">
-                        <span>Partner Sheikh</span>
+                        <span data-i18n="login_sheikh_role">Partner Sheikh</span>
                     </label>
                 </div>
                 
                 <form id="login-form">
                     <div class="form-group" id="login-password-group">
-                        <label for="login-password">System Admin Passcode</label>
+                        <label for="login-password" data-i18n="login_admin_passcode">System Admin Passcode</label>
                         <input type="password" id="login-password" class="form-control" placeholder="••••••••">
                     </div>
                     
                     <div class="form-group hidden" id="login-phone-group">
-                        <label for="login-phone">Registered Contact Phone</label>
+                        <label for="login-phone" data-i18n="login_sheikh_phone">Registered Contact Phone</label>
                         <input type="text" id="login-phone" class="form-control" placeholder="e.g. 01011112222">
                     </div>
                     
-                    <button type="submit" class="btn btn-primary w-full" style="margin-top: 1rem;">Access Dashboard</button>
+                    <button type="submit" class="btn btn-primary w-full" style="margin-top: 1rem;" data-i18n="login_btn">Access Dashboard</button>
                 </form>
                 
-                <div class="login-divider"><span>OR</span></div>
+                <div class="login-divider"><span data-i18n="login_or">OR</span></div>
                 
-                <button type="button" id="btn-gallery-access" class="btn btn-secondary w-full">Access Showcase Gallery</button>
+                <button type="button" id="btn-gallery-access" class="btn btn-secondary w-full" data-i18n="login_guest_btn">Access Showcase Gallery</button>
             </div>
         </div>
     </div>
@@ -83,13 +83,13 @@
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    <span>Orders Queue</span>
+                    <span data-i18n="nav_orders">Orders Queue</span>
                 </a>
                 <a href="#" class="nav-item" data-page="orders-history-page" id="nav-orders-history">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"></path>
                     </svg>
-                    <span>Order History</span>
+                    <span data-i18n="nav_history">Order History</span>
                 </a>
                 <a href="#" class="nav-item" data-page="sheikhs-page" id="nav-sheikhs">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -98,21 +98,21 @@
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
-                    <span>Sheikhs</span>
+                    <span data-i18n="nav_sheikhs">Sheikhs</span>
                 </a>
                 <a href="#" class="nav-item" data-page="cashbox-page" id="nav-cashbox">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="12" y1="1" x2="12" y2="23"></line>
                         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
                     </svg>
-                    <span>Cashbox</span>
+                    <span data-i18n="nav_cashbox">Cashbox</span>
                 </a>
                 <a href="#" class="nav-item" data-page="expenses-page" id="nav-expenses">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
                         <polyline points="17 6 23 6 23 12"></polyline>
                     </svg>
-                    <span>Expenses</span>
+                    <span data-i18n="nav_expenses">Expenses</span>
                 </a>
                 <a href="#" class="nav-item" data-page="gallery-page" id="nav-gallery-admin">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -120,7 +120,7 @@
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
                         <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
-                    <span>Gallery Showcase</span>
+                    <span data-i18n="nav_gallery">Gallery Showcase</span>
                 </a>
             </nav>
 
@@ -133,7 +133,7 @@
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    <span>My Certificates</span>
+                    <span data-i18n="sheikh_portal_title">My Certificates</span>
                 </a>
                 <a href="#" class="nav-item" data-page="gallery-page" id="nav-gallery-sheikh">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -141,7 +141,7 @@
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
                         <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
-                    <span>Gallery Showcase</span>
+                    <span data-i18n="nav_gallery">Gallery Showcase</span>
                 </a>
             </nav>
 
@@ -153,25 +153,35 @@
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
                         <polyline points="21 15 16 10 5 21"></polyline>
                     </svg>
-                    <span>Gallery Showroom</span>
+                    <span data-i18n="nav_gallery">Gallery Showroom</span>
                 </a>
             </nav>
             
             <!-- Admin-only Package tracking -->
             <div class="package-card" id="package-badge-container">
-                <span class="package-label">Package Status</span>
+                <span class="package-label" data-i18n="package_status">Package Status</span>
                 <button class="package-btn green" id="package-timer-btn">Loading...</button>
-                <span class="package-help">Days elapsed since last run</span>
+                <span class="package-help" data-i18n="package_timer_help">Days elapsed since last run</span>
             </div>
 
+            <!-- Language Switcher -->
+            <a href="#" class="nav-item" id="nav-lang-toggle" style="margin-top: auto; border-color: transparent;">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <span id="lang-toggle-text">العربية</span>
+            </a>
+
             <!-- Logout Link -->
-            <a href="#" class="nav-item" id="nav-logout" style="margin-top: 1rem; color: var(--color-danger); border-color: transparent;">
+            <a href="#" class="nav-item" id="nav-logout" style="margin-top: 0.5rem; color: var(--color-danger); border-color: transparent;">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                     <polyline points="16 17 21 12 16 7"></polyline>
                     <line x1="21" y1="12" x2="9" y2="12"></line>
                 </svg>
-                <span>Logout</span>
+                <span data-i18n="logout">Logout</span>
             </a>
         </aside>
 
@@ -184,30 +194,30 @@
             <section id="orders-page" class="page-section active">
                 <header class="page-header">
                     <div>
-                        <h1 class="page-title">Active Orders</h1>
-                        <p class="page-subtitle">Track printing queue lifecycle states</p>
+                        <h1 class="page-title" data-i18n="active_orders">Active Orders</h1>
+                        <p class="page-subtitle" data-i18n="active_orders_desc">Track printing queue lifecycle states</p>
                     </div>
                     <button class="btn btn-primary" id="btn-new-order">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        <span>New Order</span>
+                        <span data-i18n="btn_new_order">New Order</span>
                     </button>
                 </header>
 
                 <div class="search-bar" style="margin-bottom: 1.5rem;">
-                    <input type="text" id="orders-search-input" placeholder="Search orders by sheikh name, phone, city, or content summary..." class="form-control">
+                    <input type="text" id="orders-search-input" data-i18n-placeholder="search_orders_placeholder" placeholder="Search orders by sheikh name, phone, city, or content summary..." class="form-control">
                 </div>
 
                 <div class="tabs-container">
                     <div class="tabs-list">
-                        <button class="tab-item active" data-state="ALL">All Active</button>
-                        <button class="tab-item" data-state="NEXT">Next</button>
-                        <button class="tab-item" data-state="DESIGN">Design</button>
-                        <button class="tab-item" data-state="PRINT">Print</button>
-                        <button class="tab-item" data-state="POST">Post</button>
-                        <button class="tab-item" data-state="DELIVER">Deliver</button>
+                        <button class="tab-item active" data-state="ALL" data-i18n="tab_all">All Active</button>
+                        <button class="tab-item" data-state="NEXT" data-i18n="tab_next">Next</button>
+                        <button class="tab-item" data-state="DESIGN" data-i18n="tab_design">Design</button>
+                        <button class="tab-item" data-state="PRINT" data-i18n="tab_print">Print</button>
+                        <button class="tab-item" data-state="POST" data-i18n="tab_post">Post</button>
+                        <button class="tab-item" data-state="DELIVER" data-i18n="tab_deliver">Deliver</button>
                     </div>
                 </div>
 
@@ -216,15 +226,15 @@
                         <table class="data-table" id="orders-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Sheikh Name</th>
-                                    <th>Contents Description</th>
-                                    <th>Cost</th>
-                                    <th>Paid</th>
-                                    <th>Rest</th>
-                                    <th>Degree</th>
-                                    <th>State</th>
-                                    <th>Actions</th>
+                                    <th data-i18n="th_id">ID</th>
+                                    <th data-i18n="th_sheikh">Sheikh Name</th>
+                                    <th data-i18n="th_contents">Contents Description</th>
+                                    <th data-i18n="th_cost">Cost</th>
+                                    <th data-i18n="th_paid">Paid</th>
+                                    <th data-i18n="th_rest">Rest</th>
+                                    <th data-i18n="th_degree">Degree</th>
+                                    <th data-i18n="th_state">State</th>
+                                    <th data-i18n="th_actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="orders-list-body">
@@ -233,7 +243,7 @@
                         </table>
                     </div>
                     <div id="orders-empty" class="empty-state hidden">
-                        <p>No active orders found in this state.</p>
+                        <p data-i18n="empty_orders">No active orders found in this state.</p>
                     </div>
                 </div>
             </section>
@@ -244,13 +254,13 @@
             <section id="orders-history-page" class="page-section">
                 <header class="page-header">
                     <div>
-                        <h1 class="page-title">Order History</h1>
-                        <p class="page-subtitle">View completed and archived orders</p>
+                        <h1 class="page-title" data-i18n="history_orders">Order History</h1>
+                        <p class="page-subtitle" data-i18n="history_orders_desc">View completed and archived orders</p>
                     </div>
                 </header>
 
                 <div class="search-bar" style="margin-bottom: 1.5rem;">
-                    <input type="text" id="history-search-input" placeholder="Search history by sheikh name, phone, city, or content summary..." class="form-control">
+                    <input type="text" id="history-search-input" data-i18n-placeholder="search_history_placeholder" placeholder="Search history by sheikh name, phone, city, or content summary..." class="form-control">
                 </div>
 
                 <div class="table-card">
@@ -258,13 +268,13 @@
                         <table class="data-table" id="history-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Sheikh Name</th>
-                                    <th>Contents Description</th>
-                                    <th>Cost</th>
-                                    <th>Paid</th>
-                                    <th>Completed Date</th>
-                                    <th>Actions</th>
+                                    <th data-i18n="th_id">ID</th>
+                                    <th data-i18n="th_sheikh">Sheikh Name</th>
+                                    <th data-i18n="th_contents">Contents Description</th>
+                                    <th data-i18n="th_cost">Cost</th>
+                                    <th data-i18n="th_paid">Paid</th>
+                                    <th data-i18n="th_completed_date">Completed Date</th>
+                                    <th data-i18n="th_actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="history-list-body">
@@ -273,7 +283,7 @@
                         </table>
                     </div>
                     <div id="history-empty" class="empty-state hidden">
-                        <p>No archived orders found.</p>
+                        <p data-i18n="empty_history">No archived orders found.</p>
                     </div>
                 </div>
             </section>
@@ -284,20 +294,20 @@
             <section id="sheikhs-page" class="page-section">
                 <header class="page-header">
                     <div>
-                        <h1 class="page-title">Sheikh Directory</h1>
-                        <p class="page-subtitle">Manage contacts and view historical statistics</p>
+                        <h1 class="page-title" data-i18n="sheikh_directory">Sheikh Directory</h1>
+                        <p class="page-subtitle" data-i18n="sheikh_desc">Manage contacts and view historical statistics</p>
                     </div>
                     <button class="btn btn-primary" id="btn-new-sheikh">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-icon">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
                             <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        <span>Add Sheikh</span>
+                        <span data-i18n="btn_new_sheikh">Add Sheikh</span>
                     </button>
                 </header>
 
                 <div class="search-bar">
-                    <input type="text" id="sheikhs-search-input" placeholder="Search by name..." class="form-control">
+                    <input type="text" id="sheikhs-search-input" data-i18n-placeholder="search_sheikh_placeholder" placeholder="Search by name..." class="form-control">
                 </div>
 
                 <div class="table-card">
@@ -305,14 +315,14 @@
                         <table class="data-table" id="sheikhs-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Name</th>
-                                    <th>Phone</th>
-                                    <th>Gender</th>
-                                    <th>Location</th>
-                                    <th>Total Spending</th>
-                                    <th>Total Items</th>
-                                    <th>Actions</th>
+                                    <th data-i18n="th_id">ID</th>
+                                    <th data-i18n="th_name">Name</th>
+                                    <th data-i18n="th_phone">Phone</th>
+                                    <th data-i18n="th_gender">Gender</th>
+                                    <th data-i18n="th_location">Location</th>
+                                    <th data-i18n="th_total_spending">Total Spending</th>
+                                    <th data-i18n="th_total_items">Total Items</th>
+                                    <th data-i18n="th_actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="sheikhs-list-body">
@@ -329,60 +339,60 @@
             <section id="cashbox-page" class="page-section">
                 <header class="page-header">
                     <div>
-                        <h1 class="page-title">Printing Cashbox</h1>
-                        <p class="page-subtitle">Calculate printing invoice values and copy transaction codes</p>
+                        <h1 class="page-title" data-i18n="cashbox_title">Printing Cashbox</h1>
+                        <p class="page-subtitle" data-i18n="cashbox_desc">Calculate printing invoice values and copy transaction codes</p>
                     </div>
                 </header>
 
                 <div class="cashbox-layout">
                     <div class="card calc-card">
-                        <h3 class="card-title">Paper Quantity Calculator</h3>
+                        <h3 class="card-title" data-i18n="calc_title">Paper Quantity Calculator</h3>
                         <div class="calc-grid">
                             <div class="form-group">
-                                <label for="calc-a4-200">A4 (200 gm) [1.5 L.E]</label>
+                                <label for="calc-a4-200" data-i18n="calc_a4_200">A4 (200 gm) [1.5 L.E]</label>
                                 <input type="number" id="calc-a4-200" class="form-control calc-input" placeholder="0">
                             </div>
                             <div class="form-group">
-                                <label for="calc-a4-300">A4 (300 gm) [2.0 L.E]</label>
+                                <label for="calc-a4-300" data-i18n="calc_a4_300">A4 (300 gm) [2.0 L.E]</label>
                                 <input type="number" id="calc-a4-300" class="form-control calc-input" placeholder="0">
                             </div>
                             <div class="form-group">
-                                <label for="calc-a3-200">A3 (200 gm) [3.0 L.E]</label>
+                                <label for="calc-a3-200" data-i18n="calc_a3_200">A3 (200 gm) [3.0 L.E]</label>
                                 <input type="number" id="calc-a3-200" class="form-control calc-input" placeholder="0">
                             </div>
                             <div class="form-group">
-                                <label for="calc-a3-300">A3 (300 gm) [4.0 L.E]</label>
+                                <label for="calc-a3-300" data-i18n="calc_a3_300">A3 (300 gm) [4.0 L.E]</label>
                                 <input type="number" id="calc-a3-300" class="form-control calc-input" placeholder="0">
                             </div>
                             <div class="form-group">
-                                <label for="calc-landscape-200">Landscape 200 gm [4.0 L.E]</label>
+                                <label for="calc-landscape-200" data-i18n="calc_landscape_200">Landscape 200 gm [4.0 L.E]</label>
                                 <input type="number" id="calc-landscape-200" class="form-control calc-input" placeholder="0">
                             </div>
                             <div class="form-group">
-                                <label for="calc-color-80">Color 80 gm [0.9 L.E]</label>
+                                <label for="calc-color-80" data-i18n="calc_color_80">Color 80 gm [0.9 L.E]</label>
                                 <input type="number" id="calc-color-80" class="form-control calc-input" placeholder="0">
                             </div>
                             <div class="form-group">
-                                <label for="calc-gray-80">Grayscale 80 gm [0.45 L.E]</label>
+                                <label for="calc-gray-80" data-i18n="calc_gray_80">Grayscale 80 gm [0.45 L.E]</label>
                                 <input type="number" id="calc-gray-80" class="form-control calc-input" placeholder="0">
                             </div>
                         </div>
-                        <button class="btn btn-secondary w-full" id="btn-calc-clear" style="margin-top: 1rem;">Reset</button>
+                        <button class="btn btn-secondary w-full" id="btn-calc-clear" style="margin-top: 1rem;" data-i18n="btn_calc_clear">Reset</button>
                     </div>
 
                     <div class="card result-card">
-                        <h3 class="card-title">Generated Invoice Details</h3>
+                        <h3 class="card-title" data-i18n="invoice_title">Generated Invoice Details</h3>
                         <textarea id="calc-result-text" class="form-control invoice-text" readonly></textarea>
                         
                         <div class="wallet-helper" style="margin-top: 1.5rem;">
-                            <h4 class="wallet-title">Vodafone Cash Transfer USSD Code</h4>
+                            <h4 class="wallet-title" data-i18n="wallet_helper">Vodafone Cash Transfer USSD Code</h4>
                             <div class="ussd-copy-box">
                                 <input type="text" id="ussd-output" class="form-control" readonly value="*9*7*phone*amount#">
-                                <button class="btn btn-secondary" id="btn-copy-ussd">Copy Code</button>
+                                <button class="btn btn-secondary" id="btn-copy-ussd" data-i18n="btn_copy_ussd">Copy Code</button>
                             </div>
 
                             <div class="quick-phones">
-                                <span class="quick-phones-label">Quick Contacts:</span>
+                                <span class="quick-phones-label" data-i18n="quick_contacts">Quick Contacts:</span>
                                 <div class="quick-phones-grid">
                                     <button class="btn btn-small" data-phone="01011187735">Contact 1</button>
                                     <button class="btn btn-small" data-phone="01018719149">Contact 2</button>
@@ -401,8 +411,8 @@
             <section id="expenses-page" class="page-section">
                 <header class="page-header">
                     <div>
-                        <h1 class="page-title">Expenses Ledger</h1>
-                        <p class="page-subtitle">Track payments and budget breakdown</p>
+                        <h1 class="page-title" data-i18n="expenses_title">Expenses Ledger</h1>
+                        <p class="page-subtitle" data-i18n="expenses_desc">Track payments and budget breakdown</p>
                     </div>
                 </header>
 
@@ -416,11 +426,11 @@
                                 <table class="data-table" id="expenses-table">
                                     <thead>
                                         <tr>
-                                            <th>Description</th>
-                                            <th>Category</th>
-                                            <th>Amount</th>
-                                            <th>Date</th>
-                                            <th>Comment</th>
+                                            <th data-i18n="th_exp_desc">Description</th>
+                                            <th data-i18n="th_exp_cat">Category</th>
+                                            <th data-i18n="th_exp_amt">Amount</th>
+                                            <th data-i18n="th_exp_date">Date</th>
+                                            <th data-i18n="th_exp_comment">Comment</th>
                                         </tr>
                                     </thead>
                                     <tbody id="expenses-list-body">
@@ -432,18 +442,18 @@
                     </div>
 
                     <div class="card expense-form-card">
-                        <h3 class="card-title">Add Expense</h3>
+                        <h3 class="card-title" data-i18n="add_expense">Add Expense</h3>
                         <form id="expense-add-form">
                             <div class="form-group">
-                                <label for="exp-name">Expense Label</label>
+                                <label for="exp-name" data-i18n="exp_label">Expense Label</label>
                                 <input type="text" id="exp-name" class="form-control" required placeholder="e.g. Rent">
                             </div>
                             <div class="form-group">
-                                <label for="exp-amount">Amount (L.E)</label>
+                                <label for="exp-amount" data-i18n="exp_amount">Amount (L.E)</label>
                                 <input type="number" id="exp-amount" step="0.01" class="form-control" required placeholder="0.00">
                             </div>
                             <div class="form-group">
-                                <label for="exp-category">Category</label>
+                                <label for="exp-category" data-i18n="exp_category">Category</label>
                                 <select id="exp-category" class="form-control" required>
                                     <option value="Rent">Rent</option>
                                     <option value="Salaries">Salaries</option>
@@ -454,10 +464,10 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="exp-comment">Comment</label>
+                                <label for="exp-comment" data-i18n="exp_comment">Comment</label>
                                 <textarea id="exp-comment" class="form-control" placeholder="Optional details..."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary w-full">Save Expense</button>
+                            <button type="submit" class="btn btn-primary w-full" data-i18n="btn_save_expense">Save Expense</button>
                         </form>
                     </div>
                 </div>
@@ -470,11 +480,11 @@
                 <header class="page-header">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 1rem; flex-wrap: wrap;">
                         <div>
-                            <h1 class="page-title">My Quran Certifications</h1>
-                            <p class="page-subtitle" id="sheikh-portal-welcome">Welcome Sheikh</p>
+                            <h1 class="page-title" data-i18n="sheikh_portal_title">My Quran Certifications</h1>
+                            <p class="page-subtitle" id="sheikh-portal-welcome" data-i18n="sheikh_portal_welcome">Welcome Sheikh</p>
                         </div>
                         <button class="btn btn-secondary" id="btn-sheikh-my-profile" style="display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 12px; padding: 0.5rem 1rem;">
-                            👤 <span>My Profile Info</span>
+                            👤 <span data-i18n="btn_sheikh_my_profile">My Profile Info</span>
                         </button>
                     </div>
                 </header>
@@ -483,21 +493,21 @@
                 <div class="category-cards-grid" style="margin-bottom: 2rem;">
                     <div class="category-summary-card">
                         <span class="category-sum-val" id="sh-stat-active">0</span>
-                        <span class="category-sum-name">Active Orders</span>
+                        <span class="category-sum-name" data-i18n="stat_active_orders">Active Orders</span>
                     </div>
                     <div class="category-summary-card">
                         <span class="category-sum-val" id="sh-stat-plates">0</span>
-                        <span class="category-sum-name">Historical Plates</span>
+                        <span class="category-sum-name" data-i18n="stat_historical_plates">Historical Plates</span>
                     </div>
                     <div class="category-summary-card">
                         <span class="category-sum-val text-danger" id="sh-stat-balance">0.00 L.E</span>
-                        <span class="category-sum-name">Pending Balance (Rest)</span>
+                        <span class="category-sum-name" data-i18n="stat_pending_balance">Pending Balance (Rest)</span>
                     </div>
                 </div>
 
                 <div class="modal-subtabs">
-                    <button class="subtab-item active" id="sh-tab-active-orders">Active Queue</button>
-                    <button class="subtab-item" id="sh-tab-history">Order History</button>
+                    <button class="subtab-item active" id="sh-tab-active-orders" data-i18n="sheikh_tab_active">Active Queue</button>
+                    <button class="subtab-item" id="sh-tab-history" data-i18n="sheikh_tab_history">Order History</button>
                 </div>
 
                 <!-- Active Queue -->
@@ -507,13 +517,13 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Order ID</th>
-                                        <th>Certification Summary</th>
-                                        <th>Cost</th>
-                                        <th>Paid</th>
-                                        <th>Outstanding Balance</th>
-                                        <th>Queue Status</th>
-                                        <th>Actions</th>
+                                        <th data-i18n="th_sh_order_id">Order ID</th>
+                                        <th data-i18n="th_sh_summary">Certification Summary</th>
+                                        <th data-i18n="th_sh_cost">Cost</th>
+                                        <th data-i18n="th_sh_paid">Paid</th>
+                                        <th data-i18n="th_sh_rest">Outstanding Balance</th>
+                                        <th data-i18n="th_sh_status">Queue Status</th>
+                                        <th data-i18n="th_sh_actions">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sh-orders-body">
@@ -531,12 +541,12 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Order ID</th>
-                                        <th>Certifications</th>
-                                        <th>Total Cost</th>
-                                        <th>Total Paid</th>
-                                        <th>Status Date</th>
-                                        <th>State</th>
+                                        <th data-i18n="th_sh_order_id">Order ID</th>
+                                        <th data-i18n="th_sh_summary">Certifications</th>
+                                        <th data-i18n="th_sh_cost">Total Cost</th>
+                                        <th data-i18n="th_sh_paid">Total Paid</th>
+                                        <th data-i18n="th_completed_date">Status Date</th>
+                                        <th data-i18n="th_state">State</th>
                                     </tr>
                                 </thead>
                                 <tbody id="sh-history-body">
@@ -554,19 +564,19 @@
             <section id="gallery-page" class="page-section">
                 <header class="page-header">
                     <div>
-                        <h1 class="page-title">Showcase Gallery</h1>
-                        <p class="page-subtitle">Browse certificate designs and stamps</p>
+                        <h1 class="page-title" data-i18n="gallery_title">Showcase Gallery</h1>
+                        <p class="page-subtitle" data-i18n="gallery_desc">Browse certificate designs and stamps</p>
                     </div>
                 </header>
                 
                 <div class="tabs-container">
                     <div class="tabs-list" id="gallery-category-tabs">
-                        <button class="tab-item active" data-category="1_ejaza">Quranic Ejazas</button>
-                        <button class="tab-item" data-category="2_background">Backgrounds</button>
-                        <button class="tab-item" data-category="3_cover">Covers</button>
-                        <button class="tab-item" data-category="4_certificate">Certificates</button>
-                        <button class="tab-item" data-category="5_tree">Lineage Trees</button>
-                        <button class="tab-item" data-category="6_stamp">Stamps</button>
+                        <button class="tab-item active" data-category="1_ejaza" data-i18n="cat_ejaza">Quranic Ejazas</button>
+                        <button class="tab-item" data-category="2_background" data-i18n="cat_background">Backgrounds</button>
+                        <button class="tab-item" data-category="3_cover" data-i18n="cat_cover">Covers</button>
+                        <button class="tab-item" data-category="4_certificate" data-i18n="cat_certificate">Certificates</button>
+                        <button class="tab-item" data-category="5_tree" data-i18n="cat_tree">Lineage Trees</button>
+                        <button class="tab-item" data-category="6_stamp" data-i18n="cat_stamp">Stamps</button>
                     </div>
                 </div>
 
@@ -587,8 +597,8 @@
         <div class="modal-container modal-large">
             <div class="modal-header">
                 <div>
-                    <h2 class="modal-title" id="details-modal-title">Order #56 Details</h2>
-                    <p class="modal-subtitle" id="details-modal-subtitle">Active order details and content list</p>
+                    <h2 class="modal-title" id="details-modal-title" data-i18n="det_title">Order Details</h2>
+                    <p class="modal-subtitle" id="details-modal-subtitle" data-i18n="det_subtitle">Active order details and content list</p>
                 </div>
                 <button class="btn-close-modal" id="btn-close-details">&times;</button>
             </div>
@@ -596,43 +606,43 @@
                 
                 <div class="details-sheikh-grid">
                     <div class="sheikh-info-block">
-                        <h4>👳 Sheikh Contact Information</h4>
+                        <h4 data-i18n="det_contact_info">👳 Sheikh Contact Information</h4>
                         <div class="sheikh-meta-grid">
-                            <div><strong>Name:</strong> <span id="det-sheikh-name">-</span></div>
-                            <div><strong>Phone:</strong> <span id="det-sheikh-phone">-</span></div>
-                            <div><strong>City:</strong> <span id="det-sheikh-city">-</span></div>
-                            <div><strong>Address:</strong> <span id="det-sheikh-address">-</span></div>
+                            <div><strong data-i18n="th_name">Name:</strong> <span id="det-sheikh-name">-</span></div>
+                            <div><strong data-i18n="th_phone">Phone:</strong> <span id="det-sheikh-phone">-</span></div>
+                            <div><strong data-i18n="sheikh_form_city">City:</strong> <span id="det-sheikh-city">-</span></div>
+                            <div><strong data-i18n="sheikh_form_address">Address:</strong> <span id="det-sheikh-address">-</span></div>
                         </div>
                     </div>
                     <div class="order-info-block">
-                        <h4>📋 Order Financial Summary</h4>
+                        <h4 data-i18n="det_fin_summary">📋 Order Financial Summary</h4>
                         <div class="order-meta-grid">
-                            <div><strong>State:</strong> <span class="badge" id="det-order-state">NEXT</span></div>
-                            <div><strong>Cost:</strong> <span id="det-order-cost">0.00 L.E</span></div>
-                            <div><strong>Paid:</strong> <span id="det-order-paid">0.00 L.E</span></div>
-                            <div><strong>Rest:</strong> <span id="det-order-rest" class="text-danger">0.00 L.E</span></div>
+                            <div><strong data-i18n="th_state">State:</strong> <span class="badge" id="det-order-state">NEXT</span></div>
+                            <div><strong data-i18n="th_cost">Cost:</strong> <span id="det-order-cost">0.00 L.E</span></div>
+                            <div><strong data-i18n="th_paid">Paid:</strong> <span id="det-order-paid">0.00 L.E</span></div>
+                            <div><strong data-i18n="th_rest">Rest:</strong> <span id="det-order-rest" class="text-danger">0.00 L.E</span></div>
                         </div>
                     </div>
                 </div>
 
                 <div class="modal-subtabs" id="details-modal-tabs-list">
-                    <button class="subtab-item active" id="subtab-view-items">View Line Items</button>
-                    <button class="subtab-item" id="subtab-bulk-insert">Bulk Ejaza Import</button>
+                    <button class="subtab-item active" id="subtab-view-items" data-i18n="det_tab_view">View Line Items</button>
+                    <button class="subtab-item" id="subtab-bulk-insert" data-i18n="det_tab_bulk">Bulk Ejaza Import</button>
                 </div>
 
                 <!-- View items Tab -->
                 <div id="modal-tab-items-content" class="subtab-content active">
                     <div class="item-add-row-form" id="details-add-item-form-wrapper">
-                        <h5>Add Single Line Item:</h5>
+                        <h5 data-i18n="det_add_single">Add Single Line Item:</h5>
                         <div class="item-form-grid">
-                            <input type="text" id="new-item-student" placeholder="Student Name" class="form-control">
+                            <input type="text" id="new-item-student" data-i18n-placeholder="det_student_name" placeholder="Student Name" class="form-control">
                             <select id="new-item-gender" class="form-control">
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
+                                <option value="Male" data-i18n="sheikh_form_gender_male">Male</option>
+                                <option value="Female" data-i18n="sheikh_form_gender_female">Female</option>
                             </select>
-                            <input type="text" id="new-item-qeraa" placeholder="Qeraa" class="form-control">
-                            <input type="text" id="new-item-tareq" placeholder="Tareq" class="form-control">
-                            <button class="btn btn-primary" id="btn-add-item">Add</button>
+                            <input type="text" id="new-item-qeraa" data-i18n-placeholder="det_qeraa" placeholder="Qeraa" class="form-control">
+                            <input type="text" id="new-item-tareq" data-i18n-placeholder="det_tareq" placeholder="Tareq" class="form-control">
+                            <button class="btn btn-primary" id="btn-add-item" data-i18n="det_btn_add">Add</button>
                         </div>
                     </div>
                     
@@ -640,12 +650,12 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Type</th>
-                                    <th>Student Name</th>
-                                    <th>Gender</th>
-                                    <th>Qeraa</th>
-                                    <th>Tareq</th>
-                                    <th id="details-items-actions-header">Actions</th>
+                                    <th data-i18n="th_state">Type</th>
+                                    <th data-i18n="det_student_name">Student Name</th>
+                                    <th data-i18n="det_gender">Gender</th>
+                                    <th data-i18n="det_qeraa">Qeraa</th>
+                                    <th data-i18n="det_tareq">Tareq</th>
+                                    <th id="details-items-actions-header" data-i18n="th_actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="details-items-body">
@@ -658,12 +668,12 @@
                 <!-- Bulk insert Tab -->
                 <div id="modal-tab-bulk-content" class="subtab-content">
                     <div class="bulk-instructions">
-                        <h5>📋 Paste a list of students in the text area below:</h5>
-                        <p>Format required per line: <strong>Student Name - Gender - Info - Qeraat</strong> (divided by hyphens `-` )</p>
+                        <h5 data-i18n="det_bulk_instructions">📋 Paste a list of students in the text area below:</h5>
+                        <p data-i18n="det_bulk_format">Format required per line: <strong>Student Name - Gender - Info - Qeraat</strong> (divided by hyphens `-` )</p>
                         <p><em>Example: Mahmoud Taha - Male - Riwayah - Hafs An Asem</em></p>
                     </div>
                     <textarea id="bulk-raw-text" class="form-control bulk-textarea" placeholder="Mahmoud Taha - Male - Riwayah - Hafs An Asem&#10;Aisha Ali - Female - Riwayah - Warsh An Nafi'"></textarea>
-                    <button class="btn btn-primary w-full" id="btn-submit-bulk" style="margin-top: 1rem;">Parse & Import List</button>
+                    <button class="btn btn-primary w-full" id="btn-submit-bulk" style="margin-top: 1rem;" data-i18n="det_btn_bulk">Parse & Import List</button>
                 </div>
 
             </div>
@@ -677,8 +687,8 @@
         <div class="modal-container">
             <div class="modal-header">
                 <div>
-                    <h2 class="modal-title" id="order-form-title">New Order</h2>
-                    <p class="modal-subtitle">Save order details into the system</p>
+                    <h2 class="modal-title" id="order-form-title" data-i18n="order_form_new">New Order</h2>
+                    <p class="modal-subtitle" data-i18n="order_form_desc">Save order details into the system</p>
                 </div>
                 <button class="btn-close-modal" id="btn-close-order-form">&times;</button>
             </div>
@@ -687,51 +697,51 @@
                     <input type="hidden" id="order-form-id">
                     
                     <div class="form-group">
-                        <label for="order-sheikh-id">Sheikh Partner</label>
+                        <label for="order-sheikh-id" data-i18n="order_form_sheikh">Sheikh Partner</label>
                         <select id="order-sheikh-id" class="form-control" required>
                             <!-- Populated dynamically -->
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label for="order-contents">Contents Summary</label>
+                        <label for="order-contents" data-i18n="order_form_contents">Contents Summary</label>
                         <input type="text" id="order-contents" class="form-control" placeholder="e.g. 5 Ejaza Plates">
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="order-cost">Total Invoice Cost (L.E)</label>
+                            <label for="order-cost" data-i18n="order_form_cost">Total Invoice Cost (L.E)</label>
                             <input type="number" id="order-cost" step="0.01" class="form-control" required value="0.00">
                         </div>
                         <div class="form-group">
-                            <label for="order-paid">Amount Paid (L.E)</label>
+                            <label for="order-paid" data-i18n="order_form_paid">Amount Paid (L.E)</label>
                             <input type="number" id="order-paid" step="0.01" class="form-control" required value="0.00">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="order-state">Status State</label>
+                            <label for="order-state" data-i18n="order_form_state">Status State</label>
                             <select id="order-state" class="form-control">
-                                <option value="NEXT">Next</option>
-                                <option value="DESIGN">Design</option>
-                                <option value="PRINT">Print</option>
-                                <option value="POST">Post</option>
-                                <option value="DELIVER">Deliver</option>
+                                <option value="NEXT" data-i18n="tab_next">Next</option>
+                                <option value="DESIGN" data-i18n="tab_design">Design</option>
+                                <option value="PRINT" data-i18n="tab_print">Print</option>
+                                <option value="POST" data-i18n="tab_post">Post</option>
+                                <option value="DELIVER" data-i18n="tab_deliver">Deliver</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="order-degree">Priority Degree</label>
+                            <label for="order-degree" data-i18n="order_form_degree">Priority Degree</label>
                             <input type="number" id="order-degree" class="form-control" value="0">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="order-comment">Internal Comments</label>
+                        <label for="order-comment" data-i18n="order_form_comment">Internal Comments</label>
                         <textarea id="order-comment" class="form-control" placeholder="Add optional order instructions..."></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full" id="btn-save-order">Create Order</button>
+                    <button type="submit" class="btn btn-primary w-full" id="btn-save-order" data-i18n="order_form_btn_create">Create Order</button>
                 </form>
             </div>
         </div>
@@ -744,8 +754,8 @@
         <div class="modal-container">
             <div class="modal-header">
                 <div>
-                    <h2 class="modal-title" id="sheikh-form-title">Add New Sheikh</h2>
-                    <p class="modal-subtitle">Save contact and shipping details</p>
+                    <h2 class="modal-title" id="sheikh-form-title" data-i18n="sheikh_form_new">Add New Sheikh</h2>
+                    <p class="modal-subtitle" data-i18n="sheikh_form_desc">Save contact and shipping details</p>
                 </div>
                 <button class="btn-close-modal" id="btn-close-sheikh-form">&times;</button>
             </div>
@@ -755,56 +765,56 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="sheikh-name">Sheikh Name</label>
+                            <label for="sheikh-name" data-i18n="sheikh_form_name">Sheikh Name</label>
                             <input type="text" id="sheikh-name" class="form-control" required placeholder="Full Name">
                         </div>
                         <div class="form-group">
-                            <label for="sheikh-gender">Gender Type</label>
+                            <label for="sheikh-gender" data-i18n="sheikh_form_gender">Gender Type</label>
                             <select id="sheikh-gender" class="form-control">
-                                <option value="true">Male (معلم)</option>
-                                <option value="false">Female (معلمة)</option>
+                                <option value="true" data-i18n="sheikh_form_gender_male">Male (معلم)</option>
+                                <option value="false" data-i18n="sheikh_form_gender_female">Female (معلمة)</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="sheikh-phone">Contact Phone</label>
+                            <label for="sheikh-phone" data-i18n="sheikh_form_phone">Contact Phone</label>
                             <input type="text" id="sheikh-phone" class="form-control" placeholder="Phone number">
                         </div>
                         <div class="form-group">
-                            <label for="sheikh-receiver-name">Receiver Name (if different)</label>
+                            <label for="sheikh-receiver-name" data-i18n="sheikh_form_receiver">Receiver Name (if different)</label>
                             <input type="text" id="sheikh-receiver-name" class="form-control" placeholder="Receiver full name">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="sheikh-country">Country</label>
+                            <label for="sheikh-country" data-i18n="sheikh_form_country">Country</label>
                             <input type="text" id="sheikh-country" class="form-control" value="Egypt">
                         </div>
                         <div class="form-group">
-                            <label for="sheikh-city">City / Province</label>
+                            <label for="sheikh-city" data-i18n="sheikh_form_city">City / Province</label>
                             <input type="text" id="sheikh-city" class="form-control" placeholder="e.g. Cairo">
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="sheikh-address">Shipping Address</label>
+                        <label for="sheikh-address" data-i18n="sheikh_form_address">Shipping Address</label>
                         <input type="text" id="sheikh-address" class="form-control" placeholder="Full postal delivery address">
                     </div>
 
                     <div class="form-group">
-                        <label for="sheikh-info">Educational Info (Qeraat, etc.)</label>
+                        <label for="sheikh-info" data-i18n="sheikh_form_info">Educational Info (Qeraat, etc.)</label>
                         <textarea id="sheikh-info" class="form-control" placeholder="Qualifications or remarks..."></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label for="sheikh-comment">Internal Remarks</label>
+                        <label for="sheikh-comment" data-i18n="order_form_comment">Internal Remarks</label>
                         <textarea id="sheikh-comment" class="form-control" placeholder="Add administrative details..."></textarea>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-full" id="btn-save-sheikh">Create Sheikh Partner</button>
+                    <button type="submit" class="btn btn-primary w-full" id="btn-save-sheikh" data-i18n="sheikh_form_btn_save">Create Sheikh Partner</button>
                 </form>
             </div>
         </div>
@@ -825,8 +835,8 @@
         <div class="modal-container modal-large">
             <div class="modal-header">
                 <div>
-                    <h2 class="modal-title" id="sheikh-details-title">Sheikh Profile Details</h2>
-                    <p class="modal-subtitle">Full contact history, statistics, and billing logs</p>
+                    <h2 class="modal-title" id="sheikh-details-title" data-i18n="sheikh_details_title">Sheikh Profile Details</h2>
+                    <p class="modal-subtitle" data-i18n="sheikh_details_desc">Full contact history, statistics, and billing logs</p>
                 </div>
                 <button class="btn-close-modal" id="btn-close-sheikh-details">&times;</button>
             </div>
@@ -841,7 +851,7 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
                                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                             </svg>
-                            <span>Call Sheikh</span>
+                            <span data-i18n="sheikh_form_call">Call Sheikh</span>
                         </a>
                     </div>
                 </div>
@@ -849,51 +859,51 @@
                 <!-- Stats Grid -->
                 <div class="sheikh-details-stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0;">
                     <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Total Spending</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;" data-i18n="th_total_spending">Total Spending</div>
                         <div id="sheikh-det-stat-cost" style="font-size: 1.3rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">0.00 L.E</div>
                     </div>
                     <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Total Plates</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;" data-i18n="th_total_items">Total Plates</div>
                         <div id="sheikh-det-stat-items" style="font-size: 1.3rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">0</div>
                     </div>
                     <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Active Orders</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;" data-i18n="stat_active_orders">Active Orders</div>
                         <div id="sheikh-det-stat-active" style="font-size: 1.3rem; font-weight: 700; color: var(--color-primary); margin-top: 0.5rem;">0</div>
                     </div>
                 </div>
 
                 <!-- Subtabs Menu -->
                 <div class="modal-subtabs" id="sheikh-details-tabs-list">
-                    <button class="subtab-item active" id="sheikh-tab-general">Detailed Info</button>
-                    <button class="subtab-item" id="sheikh-tab-active-orders-btn">Active Orders (<span id="sheikh-det-active-badge">0</span>)</button>
-                    <button class="subtab-item" id="sheikh-tab-history-orders-btn">Order History (<span id="sheikh-det-history-badge">0</span>)</button>
+                    <button class="subtab-item active" id="sheikh-tab-general" data-i18n="sheikh_tab_general">Detailed Info</button>
+                    <button class="subtab-item" id="sheikh-tab-active-orders-btn"><span data-i18n="stat_active_orders">Active Orders</span> (<span id="sheikh-det-active-badge">0</span>)</button>
+                    <button class="subtab-item" id="sheikh-tab-history-orders-btn"><span data-i18n="sheikh_tab_history">Order History</span> (<span id="sheikh-det-history-badge">0</span>)</button>
                 </div>
 
                 <!-- Tab content 1: General Info -->
                 <div id="sheikh-tab-general-content" class="subtab-content active">
                     <div class="details-sheikh-grid" style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
                         <div class="sheikh-info-block" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1.5rem;">
-                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: var(--color-primary); display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.50rem;">
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: var(--color-primary); display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.50rem;" data-i18n="sheikh_det_shipping_title">
                                 📍 Contact & Shipping Details
                             </h4>
                             <div class="sheikh-meta-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem 1.5rem;">
-                                <div><strong style="color: var(--text-secondary);">Receiver Name:</strong> <span id="sheikh-det-receiver" style="margin-left: 0.25rem;">-</span></div>
-                                <div><strong style="color: var(--text-secondary);">Country:</strong> <span id="sheikh-det-country" style="margin-left: 0.25rem;">-</span></div>
-                                <div><strong style="color: var(--text-secondary);">City/Province:</strong> <span id="sheikh-det-city" style="margin-left: 0.25rem;">-</span></div>
-                                <div style="grid-column: span 2;"><strong style="color: var(--text-secondary);">Full Delivery Address:</strong> <span id="sheikh-det-address" style="margin-left: 0.25rem; display: block; margin-top: 0.25rem;">-</span></div>
+                                <div><strong style="color: var(--text-secondary);" data-i18n="sheikh_form_receiver">Receiver Name:</strong> <span id="sheikh-det-receiver" style="margin-left: 0.25rem;">-</span></div>
+                                <div><strong style="color: var(--text-secondary);" data-i18n="sheikh_form_country">Country:</strong> <span id="sheikh-det-country" style="margin-left: 0.25rem;">-</span></div>
+                                <div><strong style="color: var(--text-secondary);" data-i18n="sheikh_form_city">City/Province:</strong> <span id="sheikh-det-city" style="margin-left: 0.25rem;">-</span></div>
+                                <div style="grid-column: span 2;"><strong style="color: var(--text-secondary);" data-i18n="sheikh_form_address">Full Delivery Address:</strong> <span id="sheikh-det-address" style="margin-left: 0.25rem; display: block; margin-top: 0.25rem;">-</span></div>
                             </div>
                         </div>
 
                         <div class="sheikh-info-block" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-glass); border-radius: var(--radius-md); padding: 1.5rem;">
-                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: var(--color-primary); display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.50rem;">
+                            <h4 style="margin-top: 0; margin-bottom: 1rem; font-size: 1rem; color: var(--color-primary); display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 0.50rem;" data-i18n="sheikh_det_edu_title">
                                 🎓 Educational Profile & Comments
                             </h4>
                             <div style="margin-bottom: 1rem;">
-                                <strong style="color: var(--text-secondary);">Qualifications (Qeraat, etc.):</strong>
+                                <strong style="color: var(--text-secondary);" data-i18n="sheikh_form_info">Qualifications (Qeraat, etc.):</strong>
                                 <p id="sheikh-det-info" style="margin-top: 0.5rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; font-size: 0.9rem; background: rgba(0,0,0,0.15); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">-</p>
                             </div>
                             <div>
-                                <strong style="color: var(--text-secondary);">Institute Remarks (Internal):</strong>
+                                <strong style="color: var(--text-secondary);" data-i18n="order_form_comment">Institute Remarks (Internal):</strong>
                                 <p id="sheikh-det-comment" style="margin-top: 0.5rem; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; font-size: 0.9rem; background: rgba(0,0,0,0.15); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">-</p>
                             </div>
                         </div>
@@ -906,14 +916,14 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Order ID</th>
-                                    <th>Content</th>
-                                    <th>Cost</th>
-                                    <th>Paid</th>
-                                    <th>Rest</th>
-                                    <th>Degree</th>
-                                    <th>State</th>
-                                    <th>Action</th>
+                                    <th data-i18n="th_id">Order ID</th>
+                                    <th data-i18n="th_contents">Content</th>
+                                    <th data-i18n="th_cost">Cost</th>
+                                    <th data-i18n="th_paid">Paid</th>
+                                    <th data-i18n="th_rest">Rest</th>
+                                    <th data-i18n="th_degree">Degree</th>
+                                    <th data-i18n="th_state">State</th>
+                                    <th data-i18n="th_actions">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="sheikh-det-active-orders-body">
@@ -929,14 +939,14 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Order ID</th>
-                                    <th>Content</th>
-                                    <th>Cost</th>
-                                    <th>Paid</th>
-                                    <th>Rest</th>
-                                    <th>Degree</th>
-                                    <th>State</th>
-                                    <th>Action</th>
+                                    <th data-i18n="th_id">Order ID</th>
+                                    <th data-i18n="th_contents">Content</th>
+                                    <th data-i18n="th_cost">Cost</th>
+                                    <th data-i18n="th_paid">Paid</th>
+                                    <th data-i18n="th_rest">Rest</th>
+                                    <th data-i18n="th_degree">Degree</th>
+                                    <th data-i18n="th_state">State</th>
+                                    <th data-i18n="th_actions">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="sheikh-det-history-orders-body">

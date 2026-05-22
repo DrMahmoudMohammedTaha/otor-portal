@@ -10,6 +10,8 @@ let currentRole = null;
 let sessionToken = null;
 let loggedSheikhId = null;
 let currentSheikhsLoadId = 0;
+let localeData = null;
+let currentLang = localStorage.getItem("otor_lang") || "en";
 
 // ==========================================
 // Session Handling Functions
@@ -61,7 +63,7 @@ async function fetchSecure(url, options = {}) {
     const response = await fetch(url, options);
     if (response.status === 403 || response.status === 401) {
         // Session expired or unauthorized -> logout
-        showToast("Session expired or unauthorized.", "error");
+        showToast(translate("toast_session_expired", "Session expired or unauthorized."), "error");
         handleLogout();
         throw new Error("Unauthorized");
     }
@@ -71,7 +73,82 @@ async function fetchSecure(url, options = {}) {
 // ==========================================
 // Application Startup & Event Listeners
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
+// ==========================================
+// Localization / Multi-Language Support
+// ==========================================
+async function initLocalization() {
+    try {
+        const res = await fetch("/static/localization.json");
+        localeData = await res.json();
+    } catch (err) {
+        console.error("Failed to load localization data", err);
+    }
+    await applyLanguage(currentLang);
+}
+
+async function applyLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem("otor_lang", lang);
+    
+    document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+    document.documentElement.setAttribute("lang", lang);
+    
+    const toggleText = document.getElementById("lang-toggle-text");
+    if (toggleText) {
+        toggleText.textContent = lang === "en" ? "العربية" : "English";
+    }
+    
+    // Translate static elements with data-i18n
+    document.querySelectorAll("[data-i18n]").forEach(elem => {
+        const key = elem.getAttribute("data-i18n");
+        const translation = translate(key, null);
+        if (translation !== null) {
+            elem.textContent = translation;
+        }
+    });
+    
+    // Translate inputs/textareas placeholders with data-i18n-placeholder
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(elem => {
+        const key = elem.getAttribute("data-i18n-placeholder");
+        const translation = translate(key, null);
+        if (translation !== null) {
+            elem.setAttribute("placeholder", translation);
+        }
+    });
+    
+    // If the session has already loaded, re-render the workspace to apply localized rows/badges
+    if (sessionToken !== null || currentRole === "guest") {
+        applyRoleInterface();
+    }
+}
+
+function toggleLanguage() {
+    const nextLang = currentLang === "en" ? "ar" : "en";
+    applyLanguage(nextLang);
+}
+
+function translate(key, defaultVal, params = null) {
+    if (!localeData || !localeData[currentLang] || !localeData[currentLang][key]) {
+        let val = defaultVal;
+        if (val === null || val === undefined) return null;
+        if (params) {
+            for (const [k, v] of Object.entries(params)) {
+                val = val.replace(`{${k}}`, v);
+            }
+        }
+        return val;
+    }
+    let val = localeData[currentLang][key];
+    if (params) {
+        for (const [k, v] of Object.entries(params)) {
+            val = val.replace(`{${k}}`, v);
+        }
+    }
+    return val;
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await initLocalization();
     initApp();
     setupEventListeners();
 });
@@ -144,7 +221,7 @@ function applyRoleInterface() {
 function handleLogout() {
     clearSession();
     initApp();
-    showToast("Logged out successfully.");
+    showToast(translate("toast_logged_out", "Logged out successfully."));
 }
 
 function setupEventListeners() {
@@ -193,7 +270,7 @@ function setupEventListeners() {
             document.getElementById("login-password").value = "";
             document.getElementById("login-phone").value = "";
             
-            showToast(`Welcome, ${data.name}!`, "success");
+            showToast(translate("toast_welcome", "Welcome, {name}!", { name: data.name }), "success");
             initApp();
             
         } catch (err) {
@@ -206,7 +283,7 @@ function setupEventListeners() {
         btnGalleryAccess.addEventListener("click", () => {
             saveSession("", "guest", "Guest Viewer", "");
             initApp();
-            showToast("Accessed Showcase Gallery as Guest.");
+            showToast(translate("toast_guest_access", "Accessed Showcase Gallery as Guest."));
         });
     }
 
@@ -242,6 +319,14 @@ function setupEventListeners() {
         e.preventDefault();
         handleLogout();
     });
+
+    const langToggle = document.getElementById("nav-lang-toggle");
+    if (langToggle) {
+        langToggle.addEventListener("click", (e) => {
+            e.preventDefault();
+            toggleLanguage();
+        });
+    }
 
     // ------------------------------------------
     // Admin: Active Orders Tab Filtering
@@ -340,7 +425,7 @@ function setupEventListeners() {
         const ussdBox = document.getElementById("ussd-output");
         ussdBox.select();
         document.execCommand("copy");
-        showToast("Vodafone Cash USSD Code copied to clipboard!", "success");
+        showToast(translate("toast_ussd_copied", "Vodafone Cash USSD Code copied to clipboard!"), "success");
     });
     
     document.querySelectorAll(".quick-phones-grid button").forEach(btn => {
@@ -360,11 +445,11 @@ function setupEventListeners() {
     // ------------------------------------------
     document.getElementById("package-timer-btn").addEventListener("click", async () => {
         if (currentRole !== "admin") return;
-        if (!confirm("Are you sure you want to start a new print run? This will reset the elapsed time counter.")) return;
+        if (!confirm(translate("confirm_new_package", "Are you sure you want to start a new print run? This will reset the elapsed time counter."))) return;
         try {
             const res = await fetchSecure(`${API_BASE}/package/start`, { method: "POST" });
             if (res.ok) {
-                showToast("New package run initialized!", "success");
+                showToast(translate("toast_package_init", "New package run initialized!"), "success");
                 loadPackageTimer();
             }
         } catch (e) {
@@ -513,7 +598,7 @@ async function loadSheikhPortal() {
         const statsRes = await fetchSecure(`${API_BASE}/sheikhs/${loggedSheikhId}/stats`);
         const stats = await statsRes.json();
         
-        document.getElementById("sheikh-portal-welcome").textContent = `Welcome, Sheikh ${stats.name}`;
+        document.getElementById("sheikh-portal-welcome").textContent = `${translate("sheikh_portal_welcome", "Welcome Sheikh")} ${stats.name}`;
         document.getElementById("sh-stat-active").textContent = stats.active_orders_count;
         document.getElementById("sh-stat-plates").textContent = stats.total_historical_items;
         
@@ -523,7 +608,7 @@ async function loadSheikhPortal() {
         
         let totalRest = 0;
         activeOrders.forEach(o => totalRest += (o.rest || 0));
-        document.getElementById("sh-stat-balance").textContent = `${totalRest.toFixed(2)} L.E`;
+        document.getElementById("sh-stat-balance").textContent = `${totalRest.toFixed(2)} ${translate("currency_le", "L.E")}`;
         
         // Populate specific selected subtab panel
         const isActiveTab = document.getElementById("sh-tab-active-orders").classList.contains("active");
@@ -545,7 +630,7 @@ function renderSheikhActiveOrders(orders) {
     body.innerHTML = "";
     
     if (orders.length === 0) {
-        body.innerHTML = `<tr><td colspan="7" style="text-align:center;">No active orders currently in print queues.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="7" style="text-align:center;">${translate("empty_orders_queue", "No active orders currently in print queues.")}</td></tr>`;
         return;
     }
     
@@ -554,13 +639,13 @@ function renderSheikhActiveOrders(orders) {
         tr.innerHTML = `
             <td>#${o.id}</td>
             <td>${escapeHTML(o.contents || "-")}</td>
-            <td>${(o.cost || 0).toFixed(2)} L.E</td>
-            <td>${(o.paid || 0).toFixed(2)} L.E</td>
-            <td class="text-danger">${(o.rest || 0).toFixed(2)} L.E</td>
-            <td><span class="badge badge-${o.state.toLowerCase()}">${o.state}</span></td>
+            <td>${(o.cost || 0).toFixed(2)} ${translate("currency_le", "L.E")}</td>
+            <td>${(o.paid || 0).toFixed(2)} ${translate("currency_le", "L.E")}</td>
+            <td class="text-danger">${(o.rest || 0).toFixed(2)} ${translate("currency_le", "L.E")}</td>
+            <td><span class="badge badge-${o.state.toLowerCase()}">${translate("state_" + o.state.toLowerCase(), o.state)}</span></td>
             <td>
                 <button class="btn btn-secondary btn-small" onclick="showOrderDetails(${o.id})">
-                    🔍 View items
+                    🔍 ${translate("tooltip_view_details", "View Details")}
                 </button>
             </td>
         `;
@@ -573,7 +658,7 @@ function renderSheikhHistoryOrders(history) {
     body.innerHTML = "";
     
     if (history.length === 0) {
-        body.innerHTML = `<tr><td colspan="6" style="text-align:center;">No historical completed orders found.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="6" style="text-align:center;">${translate("empty_history_orders", "No historical completed orders found.")}</td></tr>`;
         return;
     }
     
@@ -583,10 +668,10 @@ function renderSheikhHistoryOrders(history) {
         tr.innerHTML = `
             <td>#${o.id}</td>
             <td>${escapeHTML(o.contents || "-")}</td>
-            <td>${(o.cost || 0).toFixed(2)} L.E</td>
-            <td>${(o.paid || 0).toFixed(2)} L.E</td>
+            <td>${(o.cost || 0).toFixed(2)} ${translate("currency_le", "L.E")}</td>
+            <td>${(o.paid || 0).toFixed(2)} ${translate("currency_le", "L.E")}</td>
             <td>${dateStr}</td>
-            <td><span class="badge badge-deliver">COMPLETED</span></td>
+            <td><span class="badge badge-deliver">${translate("state_completed", "COMPLETED")}</span></td>
         `;
         body.appendChild(tr);
     });
@@ -654,28 +739,28 @@ async function loadOrders() {
                 <td>${o.paid.toFixed(2)}</td>
                 <td class="${o.rest > 0 ? 'text-danger' : 'text-success'}">${o.rest.toFixed(2)}</td>
                 <td>${o.degree}</td>
-                <td><span class="badge badge-${o.state.toLowerCase()}">${o.state}</span></td>
+                <td><span class="badge badge-${o.state.toLowerCase()}">${translate("state_" + o.state.toLowerCase(), o.state)}</span></td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn btn-details" onclick="showOrderDetails(${o.id})" title="Details & Certificates">
+                        <button class="action-btn btn-details" onclick="showOrderDetails(${o.id})" title="${translate("tooltip_details", "Details & Certificates")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <line x1="12" y1="16" x2="12" y2="12"></line>
                                 <line x1="12" y1="8" x2="12.01" y2="8"></line>
                             </svg>
                         </button>
-                        <button class="action-btn" onclick="cycleOrderState(${o.id}, '${o.state}')" title="Cycle Next State">
+                        <button class="action-btn" onclick="cycleOrderState(${o.id}, '${o.state}')" title="${translate("tooltip_cycle", "Cycle Next State")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="9 18 15 12 9 6"></polyline>
                             </svg>
                         </button>
-                        <button class="action-btn" onclick="openOrderFormModal(${o.id})" title="Edit Details">
+                        <button class="action-btn" onclick="openOrderFormModal(${o.id})" title="${translate("tooltip_edit", "Edit Info")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button class="action-btn btn-delete" onclick="handleDeleteOrder(${o.id})" title="Delete Order">
+                        <button class="action-btn btn-delete" onclick="handleDeleteOrder(${o.id})" title="${translate("tooltip_delete", "Delete")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -730,7 +815,7 @@ async function loadHistoryOrders() {
                 <td>${dateStr}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn btn-details" onclick="showOrderDetails(${o.id})" title="Details & Certificates">
+                        <button class="action-btn btn-details" onclick="showOrderDetails(${o.id})" title="${translate("tooltip_details", "Details & Certificates")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -765,11 +850,11 @@ async function cycleOrderState(id, currentState) {
         if (response.ok) {
             const data = await response.json();
             if (data.status === "state_coerced_to_deliver") {
-                showToast("Order transitioned to DELIVER due to outstanding payment balance.", "warning");
+                showToast(translate("toast_order_deliver_pending", "Order transitioned to DELIVER due to outstanding payment balance."), "warning");
             } else if (data.status === "archived") {
-                showToast("Order fully paid and archived to Order History!", "success");
+                showToast(translate("toast_order_archived", "Order fully paid and archived to Order History!"), "success");
             } else {
-                showToast(`Order status cycled to ${nextState}!`, "success");
+                showToast(translate("toast_order_cycled", "Order status cycled to {state}!", { state: translate("state_" + nextState.toLowerCase(), nextState) }), "success");
             }
             loadOrders();
         }
@@ -821,27 +906,27 @@ async function loadSheikhs() {
                 <td>#${s.id}</td>
                 <td>
                     <div style="font-weight: 600;">${escapeHTML(s.name)}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">${s.gender ? "Male (معلم)" : "Female (معلمة)"}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${s.gender ? translate("gender_male_desc", "Male (معلم)") : translate("gender_female_desc", "Female (معلمة)")}</div>
                 </td>
                 <td>${escapeHTML(s.phone || "-")}</td>
-                <td>${s.gender ? "Male" : "Female"}</td>
+                <td>${s.gender ? translate("gender_male", "Male") : translate("gender_female", "Female")}</td>
                 <td>${escapeHTML(s.city || "")} ${escapeHTML(s.country || "")}</td>
-                <td>${stats.total_historical_cost.toFixed(2)} L.E</td>
-                <td>${stats.total_historical_items} plates</td>
+                <td>${stats.total_historical_cost.toFixed(2)} ${translate("currency_le", "L.E")}</td>
+                <td>${stats.total_historical_items} ${translate("unit_plates", "plates")}</td>
                 <td>
                     <div class="table-actions">
-                        <button class="action-btn btn-details" onclick="event.stopPropagation(); openSystemSheikhFolder('${s.name}')" title="Open Local Storage Folder">
+                        <button class="action-btn btn-details" onclick="event.stopPropagation(); openSystemSheikhFolder('${s.name}')" title="${translate("tooltip_folder", "Open Local Storage Folder")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                             </svg>
                         </button>
-                        <button class="action-btn" onclick="event.stopPropagation(); openSheikhFormModal(${s.id})" title="Edit Info">
+                        <button class="action-btn" onclick="event.stopPropagation(); openSheikhFormModal(${s.id})" title="${translate("tooltip_edit", "Edit Info")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                 <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                             </svg>
                         </button>
-                        <button class="action-btn btn-delete" onclick="event.stopPropagation(); handleDeleteSheikh(${s.id})" title="Delete Partner">
+                        <button class="action-btn btn-delete" onclick="event.stopPropagation(); handleDeleteSheikh(${s.id})" title="${translate("tooltip_delete", "Delete")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -868,13 +953,13 @@ async function openSystemSheikhFolder(name) {
             body: JSON.stringify({ sheikh_name: name })
         });
         if (res.ok) {
-            showToast(`Opened folder locally for ${name}.`, "success");
+            showToast(translate("toast_folder_opened", "Opened folder locally for {name}.", { name: name }), "success");
         } else {
             const err = await res.json();
-            showToast(`Local open error: ${err.detail}`, "error");
+            showToast(translate("toast_folder_error", "Local open error: {error}", { error: err.detail }), "error");
         }
     } catch (e) {
-        showToast("Open folder triggers are only supported when running the server on a local machine.", "warning");
+        showToast(translate("toast_local_machine_only", "Open folder triggers are only supported when running the server on a local machine."), "warning");
     }
 }
 
@@ -890,23 +975,22 @@ async function showOrderDetails(orderId) {
     document.getElementById("subtab-view-items").classList.add("active");
     document.getElementById("subtab-bulk-insert").classList.remove("active");
     document.getElementById("modal-tab-items-content").classList.add("active");
-    document.getElementById("modal-tab-bulk-content").classList.remove("none");
     document.getElementById("modal-tab-bulk-content").classList.add("hidden");
 
     try {
         const res = await fetchSecure(`${API_BASE}/orders/${orderId}`);
         const data = await res.json();
         
-        document.getElementById("details-modal-title").textContent = `Order #${orderId} Overview`;
+        document.getElementById("details-modal-title").textContent = `${translate("det_title", "Order Details")} #${orderId}`;
         
         // Populate profile card
         if (data.order) {
             document.getElementById("det-sheikh-name").textContent = data.order.sheikh_name || "-";
-            document.getElementById("det-order-state").textContent = data.order.state;
+            document.getElementById("det-order-state").textContent = translate("state_" + data.order.state.toLowerCase(), data.order.state);
             document.getElementById("det-order-state").className = `badge badge-${data.order.state.toLowerCase()}`;
-            document.getElementById("det-order-cost").textContent = `${data.order.cost.toFixed(2)} L.E`;
-            document.getElementById("det-order-paid").textContent = `${data.order.paid.toFixed(2)} L.E`;
-            document.getElementById("det-order-rest").textContent = `${data.order.rest.toFixed(2)} L.E`;
+            document.getElementById("det-order-cost").textContent = `${data.order.cost.toFixed(2)} ${translate("currency_le", "L.E")}`;
+            document.getElementById("det-order-paid").textContent = `${data.order.paid.toFixed(2)} ${translate("currency_le", "L.E")}`;
+            document.getElementById("det-order-rest").textContent = `${data.order.rest.toFixed(2)} ${translate("currency_le", "L.E")}`;
         }
         
         // If sheikh details are loaded
@@ -960,7 +1044,7 @@ async function loadOrderContentItems(orderId, isArchived = false) {
         body.innerHTML = "";
         
         if (items.length === 0) {
-            body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No certificate lines found.</td></tr>`;
+            body.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">${translate("empty_certificate_lines", "No certificate lines found.")}</td></tr>`;
             return;
         }
         
@@ -982,7 +1066,7 @@ async function loadOrderContentItems(orderId, isArchived = false) {
             tr.innerHTML = `
                 <td><span class="badge ${i.type === 'EJAZA' ? 'badge-design' : 'badge-next'}">${i.type}</span></td>
                 <td>${escapeHTML(i.student_name || "-")}</td>
-                <td>${escapeHTML(i.student_gender || "-")}</td>
+                <td>${i.student_gender ? (i.student_gender.toLowerCase() === 'male' ? translate("gender_male", "Male") : translate("gender_female", "Female")) : "-"}</td>
                 <td>${escapeHTML(i.qeraa || "-")}</td>
                 <td>${escapeHTML(i.student_info || "-")}</td>
                 ${actionTd}
@@ -1002,7 +1086,7 @@ async function handleAddSingleItem() {
     const info = document.getElementById("new-item-tareq").value.trim();
     
     if (!student) {
-        showToast("Student name is required.", "error");
+        showToast(translate("toast_student_name_required", "Student name is required."), "error");
         return;
     }
     
@@ -1023,7 +1107,7 @@ async function handleAddSingleItem() {
             body: JSON.stringify(payload)
         });
         if (res.ok) {
-            showToast("Line item added successfully!", "success");
+            showToast(translate("toast_item_added", "Line item added successfully!"), "success");
             // Clear inputs
             document.getElementById("new-item-student").value = "";
             document.getElementById("new-item-qeraa").value = "";
@@ -1040,7 +1124,7 @@ async function handleAddSingleItem() {
 async function handleBulkParse() {
     const rawText = document.getElementById("bulk-raw-text").value.trim();
     if (!rawText) {
-        showToast("Please enter text lines to parse.", "error");
+        showToast(translate("toast_parse_empty", "Please enter text lines to parse."), "error");
         return;
     }
     
@@ -1055,7 +1139,7 @@ async function handleBulkParse() {
         
         if (res.ok) {
             const data = await res.json();
-            showToast(`Parsed and imported ${data.inserted_count} lines!`, "success");
+            showToast(translate("toast_parsed_lines", "Parsed and imported {count} lines!", { count: data.inserted_count }), "success");
             document.getElementById("bulk-raw-text").value = "";
             
             // Switch tab view back to items list
@@ -1069,11 +1153,11 @@ async function handleBulkParse() {
 
 // Delete individual content line item
 async function handleDeleteContent(id) {
-    if (!confirm("Are you sure you want to delete this certificate item?")) return;
+    if (!confirm(translate("confirm_delete_item", "Are you sure you want to delete this certificate item?"))) return;
     try {
         const res = await fetchSecure(`${API_BASE}/content/${id}`, { method: "DELETE" });
         if (res.ok) {
-            showToast("Item deleted.");
+            showToast(translate("toast_item_deleted", "Item deleted."));
             loadOrderContentItems(activeDetailsOrderId);
         }
     } catch (e) {
@@ -1160,7 +1244,7 @@ async function handleOrderSubmit(e) {
         });
         
         if (res.ok) {
-            showToast(isEdit ? "Order details updated." : "New order registered!", "success");
+            showToast(isEdit ? translate("toast_order_updated", "Order details updated.") : translate("toast_order_registered", "New order registered!"), "success");
             closeOrderFormModal();
             loadOrders();
         }
@@ -1170,11 +1254,11 @@ async function handleOrderSubmit(e) {
 }
 
 async function handleDeleteOrder(id) {
-    if (!confirm("Are you sure you want to delete this order? All related line certificate items will be permanently erased.")) return;
+    if (!confirm(translate("confirm_delete_order", "Are you sure you want to delete this order? All related line certificate items will be permanently erased."))) return;
     try {
         const res = await fetchSecure(`${API_BASE}/orders/${id}`, { method: "DELETE" });
         if (res.ok) {
-            showToast("Order and certificate contents deleted.");
+            showToast(translate("toast_order_deleted", "Order and certificate contents deleted."));
             loadOrders();
         }
     } catch (e) {
@@ -1226,7 +1310,7 @@ async function showSheikhDetailsModal(sheikh, stats) {
     
     // 2. Set basic header details
     document.getElementById("sheikh-det-name").textContent = sheikh.name;
-    document.getElementById("sheikh-det-phone-city").textContent = `${sheikh.phone || "No Phone"} | ${sheikh.city || "No City"}`;
+    document.getElementById("sheikh-det-phone-city").textContent = `${sheikh.phone || translate("no_phone", "No Phone")} | ${sheikh.city || translate("no_city", "No City")}`;
     
     // 3. Set avatar icon based on gender
     const avatarIcon = document.getElementById("sheikh-det-avatar-icon");
@@ -1246,8 +1330,8 @@ async function showSheikhDetailsModal(sheikh, stats) {
     }
     
     // 5. Populate Stats Grid
-    document.getElementById("sheikh-det-stat-cost").textContent = `${stats.total_historical_cost.toFixed(2)} L.E`;
-    document.getElementById("sheikh-det-stat-items").textContent = `${stats.total_historical_items} plates`;
+    document.getElementById("sheikh-det-stat-cost").textContent = `${stats.total_historical_cost.toFixed(2)} ${translate("currency_le", "L.E")}`;
+    document.getElementById("sheikh-det-stat-items").textContent = `${stats.total_historical_items} ${translate("unit_plates", "plates")}`;
     document.getElementById("sheikh-det-stat-active").textContent = stats.active_orders_count;
     
     // 6. Populate General Info Fields
@@ -1255,15 +1339,15 @@ async function showSheikhDetailsModal(sheikh, stats) {
     document.getElementById("sheikh-det-country").textContent = sheikh.country || "-";
     document.getElementById("sheikh-det-city").textContent = sheikh.city || "-";
     document.getElementById("sheikh-det-address").textContent = sheikh.address || "-";
-    document.getElementById("sheikh-det-info").textContent = sheikh.info || "No educational remarks recorded.";
-    document.getElementById("sheikh-det-comment").textContent = sheikh.comment || "No internal comments.";
+    document.getElementById("sheikh-det-info").textContent = sheikh.info || translate("no_edu_remarks", "No educational remarks recorded.");
+    document.getElementById("sheikh-det-comment").textContent = sheikh.comment || translate("no_internal_comments", "No internal comments.");
     
     // 7. Load Active & History Orders in parallel
     const activeBody = document.getElementById("sheikh-det-active-orders-body");
     const historyBody = document.getElementById("sheikh-det-history-orders-body");
     
-    activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading active orders...</td></tr>`;
-    historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Loading order history...</td></tr>`;
+    activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">${translate("loading_active_orders", "Loading active orders...")}</td></tr>`;
+    historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">${translate("loading_order_history", "Loading order history...")}</td></tr>`;
     
     // Clear badges
     document.getElementById("sheikh-det-active-badge").textContent = "0";
@@ -1288,7 +1372,7 @@ async function showSheikhDetailsModal(sheikh, stats) {
         // Render Active Orders
         activeBody.innerHTML = "";
         if (activeOrders.length === 0) {
-            activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No active orders.</td></tr>`;
+            activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">${translate("empty_active_orders", "No active orders.")}</td></tr>`;
         } else {
             activeOrders.forEach(o => {
                 const tr = document.createElement("tr");
@@ -1299,9 +1383,9 @@ async function showSheikhDetailsModal(sheikh, stats) {
                     <td>${o.paid.toFixed(2)}</td>
                     <td class="${o.rest > 0 ? 'text-danger' : 'text-success'}">${o.rest.toFixed(2)}</td>
                     <td>${o.degree}</td>
-                    <td><span class="badge badge-${o.state.toLowerCase()}">${o.state}</span></td>
+                    <td><span class="badge badge-${o.state.toLowerCase()}">${translate("state_" + o.state.toLowerCase(), o.state)}</span></td>
                     <td>
-                        <button class="action-btn btn-details" onclick="event.stopPropagation(); closeSheikhDetailsModal(); showOrderDetails(${o.id})" title="View Details">
+                        <button class="action-btn btn-details" onclick="event.stopPropagation(); closeSheikhDetailsModal(); showOrderDetails(${o.id})" title="${translate("tooltip_view_details", "View Details")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -1317,7 +1401,7 @@ async function showSheikhDetailsModal(sheikh, stats) {
         // Render History Orders
         historyBody.innerHTML = "";
         if (historyOrders.length === 0) {
-            historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No completed orders.</td></tr>`;
+            historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">${translate("empty_completed_orders", "No completed orders.")}</td></tr>`;
         } else {
             historyOrders.forEach(o => {
                 const tr = document.createElement("tr");
@@ -1328,9 +1412,9 @@ async function showSheikhDetailsModal(sheikh, stats) {
                     <td>${o.paid.toFixed(2)}</td>
                     <td class="${o.rest > 0 ? 'text-danger' : 'text-success'}">${o.rest.toFixed(2)}</td>
                     <td>${o.degree}</td>
-                    <td><span class="badge badge-deliver">DONE</span></td>
+                    <td><span class="badge badge-deliver">${translate("state_completed", "COMPLETED")}</span></td>
                     <td>
-                        <button class="action-btn btn-details" onclick="event.stopPropagation(); closeSheikhDetailsModal(); showOrderDetails(${o.id})" title="View Details">
+                        <button class="action-btn btn-details" onclick="event.stopPropagation(); closeSheikhDetailsModal(); showOrderDetails(${o.id})" title="${translate("tooltip_view_details", "View Details")}">
                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <line x1="12" y1="16" x2="12" y2="12"></line>
@@ -1345,8 +1429,8 @@ async function showSheikhDetailsModal(sheikh, stats) {
         
     } catch (e) {
         console.error("Error loading sheikh orders inside details modal", e);
-        activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">Failed to load active orders.</td></tr>`;
-        historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">Failed to load order history.</td></tr>`;
+        activeBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">${translate("error_load_active_orders", "Failed to load active orders.")}</td></tr>`;
+        historyBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-danger);">${translate("error_load_order_history", "Failed to load order history.")}</td></tr>`;
     }
 }
 
@@ -1366,11 +1450,11 @@ async function showLoggedSheikhProfile() {
             const stats = await resStats.json();
             showSheikhDetailsModal(sheikh, stats);
         } else {
-            showToast("Failed to load profile details.", "error");
+            showToast(translate("toast_profile_load_failed", "Failed to load profile details."), "error");
         }
     } catch (e) {
         console.error("Error loading profile info", e);
-        showToast("Failed to load profile details.", "error");
+        showToast(translate("toast_profile_load_failed", "Failed to load profile details."), "error");
     }
 }
 
@@ -1403,7 +1487,7 @@ async function handleSheikhSubmit(e) {
         });
         
         if (res.ok) {
-            showToast(isEdit ? "Sheikh details updated." : "New sheikh added successfully!", "success");
+            showToast(isEdit ? translate("toast_sheikh_updated", "Sheikh details updated.") : translate("toast_sheikh_added", "New sheikh added successfully!"), "success");
             closeSheikhFormModal();
             loadSheikhs();
         }
@@ -1413,11 +1497,11 @@ async function handleSheikhSubmit(e) {
 }
 
 async function handleDeleteSheikh(id) {
-    if (!confirm("Are you sure you want to delete this sheikh? Active orders linked to them will remain, but database constraints will be updated.")) return;
+    if (!confirm(translate("confirm_delete_sheikh", "Are you sure you want to delete this sheikh? Active orders linked to them will remain, but database constraints will be updated."))) return;
     try {
         const res = await fetchSecure(`${API_BASE}/sheikhs/${id}`, { method: "DELETE" });
         if (res.ok) {
-            showToast("Sheikh deleted successfully.");
+            showToast(translate("toast_sheikh_deleted", "Sheikh deleted successfully."));
             loadSheikhs();
         }
     } catch (e) {
@@ -1515,8 +1599,8 @@ async function loadExpenses() {
             return `
                 <tr>
                     <td>${escapeHTML(e.name)}</td>
-                    <td><span class="badge badge-next">${e.category}</span></td>
-                    <td>${e.amount.toFixed(2)} L.E</td>
+                    <td><span class="badge badge-next">${translate("exp_cat_" + e.category.toLowerCase(), e.category)}</span></td>
+                    <td>${e.amount.toFixed(2)} ${translate("currency_le", "L.E")}</td>
                     <td>${dateStr}</td>
                     <td style="color: var(--text-muted); font-size: 0.85rem;">${escapeHTML(e.comment || "-")}</td>
                 </tr>
@@ -1531,7 +1615,7 @@ async function loadExpenses() {
         catContainer.innerHTML = categories.map(c => `
             <div class="category-summary-card">
                 <span class="category-sum-val">${c.total.toFixed(2)}</span>
-                <span class="category-sum-name">${c.category}</span>
+                <span class="category-sum-name">${translate("exp_cat_" + c.category.toLowerCase(), c.category)}</span>
             </div>
         `).join("");
         
@@ -1557,7 +1641,7 @@ async function handleExpenseSubmit(e) {
         });
         
         if (res.ok) {
-            showToast("Expense record added.", "success");
+            showToast(translate("toast_expense_added", "Expense record added."), "success");
             document.getElementById("expense-add-form").reset();
             loadExpenses();
         }
@@ -1598,7 +1682,7 @@ function debounce(func, wait) {
 async function loadGallery(category) {
     const grid = document.getElementById("gallery-grid");
     if (!grid) return;
-    grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--text-secondary); padding: 2rem;">Loading gallery items...</div>`;
+    grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--text-secondary); padding: 2rem;">${translate("loading_gallery_items", "Loading gallery items...")}</div>`;
     
     try {
         const res = await fetch(`/api/gallery/${category}`);
@@ -1609,7 +1693,7 @@ async function loadGallery(category) {
         
         grid.innerHTML = "";
         if (images.length === 0) {
-            grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--text-muted); padding: 2rem;">No design previews available in this category.</div>`;
+            grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--text-muted); padding: 2rem;">${translate("empty_gallery", "No design previews available in this category.")}</div>`;
             return;
         }
         
@@ -1639,6 +1723,6 @@ async function loadGallery(category) {
         });
     } catch (e) {
         console.error(e);
-        grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--color-danger); padding: 2rem;">Error loading gallery images.</div>`;
+        grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--color-danger); padding: 2rem;">${translate("error_gallery", "Error loading gallery images.")}</div>`;
     }
 }

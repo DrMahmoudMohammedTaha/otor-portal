@@ -1192,3 +1192,61 @@ select.form-control {
     border-color: var(--border-glass-focus) !important;
     transform: translateY(-2px);
 }
+
+/* ==========================================
+   RTL Layout & Typography Overrides (Arabic)
+   ========================================== */
+[dir="rtl"] {
+    --font-primary: 'Cairo', 'Outfit', 'Inter', sans-serif;
+}
+
+[dir="rtl"] .sidebar {
+    border-right: none;
+    border-left: 1px solid var(--border-glass);
+}
+
+[dir="rtl"] .nav-item.active {
+    box-shadow: inset -4px 0 0 var(--color-primary);
+}
+
+[dir="rtl"] .data-table {
+    text-align: right;
+}
+
+[dir="rtl"] select.form-control {
+    background-position: left 1rem center;
+    padding-right: 1rem;
+    padding-left: 2.5rem;
+}
+
+[dir="rtl"] .toast {
+    right: auto;
+    left: 2rem;
+    animation: slideInRTL 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+[dir="rtl"] .toast.success {
+    border-left: none;
+    border-right: 4px solid var(--color-success);
+}
+
+[dir="rtl"] .toast.error {
+    border-left: none;
+    border-right: 4px solid var(--color-danger);
+}
+
+@keyframes slideInRTL {
+    from { transform: translateX(-120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+[dir="rtl"] .bulk-instructions {
+    border-left: none;
+    border-right: 4px solid var(--color-primary);
+}
+
+[dir="rtl"] .gallery-viewer-close {
+    right: auto;
+    left: 2.5rem;
+}
+
