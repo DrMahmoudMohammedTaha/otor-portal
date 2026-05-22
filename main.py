@@ -283,13 +283,31 @@ def list_orders(
 @app.get("/api/orders/history")
 def list_order_history(
     sheikh_id: Optional[int] = None,
+    search: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
     query = select(OrderHistory)
     if sheikh_id:
         query = query.where(OrderHistory.sheikh_id == sheikh_id)
     query = query.order_by(OrderHistory.update_date.desc())
-    return session.exec(query).all()
+    history_list = session.exec(query).all()
+    
+    if search:
+        search_norm = normalize_arabic_str(search).lower()
+        filtered = []
+        for o in history_list:
+            name_norm = normalize_arabic_str(o.sheikh_name or "").lower()
+            phone_norm = normalize_arabic_str(o.p_phone or "").lower()
+            city_norm = normalize_arabic_str(o.p_city or "").lower()
+            content_norm = normalize_arabic_str(o.contents or "").lower()
+            if (search_norm in name_norm or 
+                search_norm in phone_norm or 
+                search_norm in city_norm or 
+                search_norm in content_norm):
+                filtered.append(o)
+        return filtered
+        
+    return history_list
 
 @app.get("/api/orders/{id}")
 def get_order_details(id: int, session: Session = Depends(get_session)):

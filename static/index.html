@@ -85,6 +85,12 @@
                     </svg>
                     <span>Orders Queue</span>
                 </a>
+                <a href="#" class="nav-item" data-page="orders-history-page" id="nav-orders-history">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"></path>
+                    </svg>
+                    <span>Order History</span>
+                </a>
                 <a href="#" class="nav-item" data-page="sheikhs-page" id="nav-sheikhs">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -228,6 +234,46 @@
                     </div>
                     <div id="orders-empty" class="empty-state hidden">
                         <p>No active orders found in this state.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==========================================
+            ADMIN PAGE: ORDER HISTORY
+            ========================================== -->
+            <section id="orders-history-page" class="page-section">
+                <header class="page-header">
+                    <div>
+                        <h1 class="page-title">Order History</h1>
+                        <p class="page-subtitle">View completed and archived orders</p>
+                    </div>
+                </header>
+
+                <div class="search-bar" style="margin-bottom: 1.5rem;">
+                    <input type="text" id="history-search-input" placeholder="Search history by sheikh name, phone, city, or content summary..." class="form-control">
+                </div>
+
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table class="data-table" id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Sheikh Name</th>
+                                    <th>Contents Description</th>
+                                    <th>Cost</th>
+                                    <th>Paid</th>
+                                    <th>Completed Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-list-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="history-empty" class="empty-state hidden">
+                        <p>No archived orders found.</p>
                     </div>
                 </div>
             </section>

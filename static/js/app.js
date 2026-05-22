@@ -226,6 +226,7 @@ function setupEventListeners() {
             
             // Refresh lists upon navigational entry
             if (targetPage === "orders-page") loadOrders();
+            if (targetPage === "orders-history-page") loadHistoryOrders();
             if (targetPage === "sheikhs-page") loadSheikhs();
             if (targetPage === "expenses-page") loadExpenses();
             if (targetPage === "sheikh-portal-page") loadSheikhPortal();
@@ -416,6 +417,14 @@ function setupEventListeners() {
     const ordersSearchInput = document.getElementById("orders-search-input");
     if (ordersSearchInput) {
         ordersSearchInput.addEventListener("input", debounce(loadOrders, 300));
+    }
+
+    // ------------------------------------------
+    // Order History Search Handler
+    // ------------------------------------------
+    const historySearchInput = document.getElementById("history-search-input");
+    if (historySearchInput) {
+        historySearchInput.addEventListener("input", debounce(loadHistoryOrders, 300));
     }
 
     // ------------------------------------------
@@ -685,6 +694,60 @@ async function loadOrders() {
     }
 }
 
+// Load Order History
+async function loadHistoryOrders() {
+    if (currentRole !== "admin") return;
+    const queryVal = document.getElementById("history-search-input").value.trim();
+    const url = queryVal ? `${API_BASE}/orders/history?search=${encodeURIComponent(queryVal)}` : `${API_BASE}/orders/history`;
+    
+    try {
+        const res = await fetchSecure(url);
+        const history = await res.json();
+        
+        const body = document.getElementById("history-list-body");
+        const emptyState = document.getElementById("history-empty");
+        
+        body.innerHTML = "";
+        
+        if (history.length === 0) {
+            emptyState.classList.remove("hidden");
+            return;
+        }
+        emptyState.classList.add("hidden");
+        
+        history.forEach(o => {
+            const tr = document.createElement("tr");
+            const dateStr = o.update_date ? new Date(o.update_date).toLocaleDateString() : "-";
+            tr.innerHTML = `
+                <td>#${o.id}</td>
+                <td>
+                    <div style="font-weight: 600;">${escapeHTML(o.sheikh_name)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHTML(o.p_phone || "")} ${escapeHTML(o.p_city || "")}</div>
+                </td>
+                <td>${escapeHTML(o.contents || "-")}</td>
+                <td>${(o.cost || 0).toFixed(2)}</td>
+                <td>${(o.paid || 0).toFixed(2)}</td>
+                <td>${dateStr}</td>
+                <td>
+                    <div class="table-actions">
+                        <button class="action-btn btn-details" onclick="showOrderDetails(${o.id})" title="Details & Certificates">
+                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            `;
+            body.appendChild(tr);
+        });
+        
+    } catch (e) {
+        console.error(e);
+    }
+}
+
 // State cycling machine transitions
 async function cycleOrderState(id, currentState) {
     const states = ["NEXT", "DESIGN", "PRINT", "POST", "DELIVER", "DONE"];
@@ -865,7 +928,7 @@ async function showOrderDetails(orderId) {
         const bulkTabHeader = document.getElementById("subtab-bulk-insert");
         const itemsActionsHeader = document.getElementById("details-items-actions-header");
         
-        if (currentRole === "sheikh") {
+        if (currentRole === "sheikh" || data.archived) {
             // Hide modifications inputs & tabs
             singleFormWrapper.classList.add("hidden");
             bulkTabHeader.classList.add("hidden");
@@ -878,7 +941,7 @@ async function showOrderDetails(orderId) {
         }
 
         // Load items list
-        loadOrderContentItems(orderId);
+        loadOrderContentItems(orderId, !!data.archived);
         
         // Show modal
         document.getElementById("details-modal").classList.remove("hidden");
@@ -888,7 +951,7 @@ async function showOrderDetails(orderId) {
     }
 }
 
-async function loadOrderContentItems(orderId) {
+async function loadOrderContentItems(orderId, isArchived = false) {
     try {
         const res = await fetchSecure(`${API_BASE}/content?order_id=${orderId}`);
         const items = await res.json();
@@ -904,9 +967,9 @@ async function loadOrderContentItems(orderId) {
         items.forEach(i => {
             const tr = document.createElement("tr");
             
-            // Build action buttons row conditionally based on role
+            // Build action buttons row conditionally based on role and archive status
             let actionTd = "";
-            if (currentRole === "admin") {
+            if (currentRole === "admin" && !isArchived) {
                 actionTd = `
                     <td>
                         <button class="action-btn btn-delete btn-small" onclick="handleDeleteContent(${i.id})">
