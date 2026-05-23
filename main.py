@@ -70,43 +70,51 @@ def get_next_id(session: Session, table_name: str) -> int:
 # ==========================================
 @app.post("/api/auth/login")
 def login(payload: LoginRequest, session: Session = Depends(get_session)):
-    role = payload.role.lower()
-    
-    if role == "admin":
-        if payload.password == ADMIN_PASSWORD:
-            return {
-                "token": "admin-session-token",
-                "role": "admin",
-                "name": "System Administrator",
-                "sheikh_id": None
-            }
-        raise HTTPException(status_code=401, detail="Invalid admin password.")
+    try:
+        role = payload.role.lower()
         
-    elif role == "sheikh":
-        if not payload.phone or not payload.phone.strip():
-            raise HTTPException(status_code=400, detail="Phone number is required.")
-        
-        phone_stripped = payload.phone.strip()
-        # Query sheikh table matching phone number
-        query = select(Sheikh).where(Sheikh.phone == phone_stripped)
-        sheikh = session.exec(query).first()
-        
-        # Fallback search matching with trailing or leading matches if exact match fails
-        if not sheikh:
-            query_fuzzy = select(Sheikh).where(Sheikh.phone.like(f"%{phone_stripped}%"))
-            sheikh = session.exec(query_fuzzy).first()
+        if role == "admin":
+            if payload.password == ADMIN_PASSWORD:
+                return {
+                    "token": "admin-session-token",
+                    "role": "admin",
+                    "name": "System Administrator",
+                    "sheikh_id": None
+                }
+            raise HTTPException(status_code=401, detail="Invalid admin password.")
             
-        if sheikh:
-            return {
-                "token": f"sheikh-session-token-{sheikh.id}",
-                "role": "sheikh",
-                "name": sheikh.name,
-                "sheikh_id": sheikh.id
-            }
+        elif role == "sheikh":
+            if not payload.phone or not payload.phone.strip():
+                raise HTTPException(status_code=400, detail="Phone number is required.")
             
-        raise HTTPException(status_code=401, detail="Phone number is not registered.")
-        
-    raise HTTPException(status_code=400, detail="Invalid role specified.")
+            phone_stripped = payload.phone.strip()
+            # Query sheikh table matching phone number
+            query = select(Sheikh).where(Sheikh.phone == phone_stripped)
+            sheikh = session.exec(query).first()
+            
+            # Fallback search matching with trailing or leading matches if exact match fails
+            if not sheikh:
+                query_fuzzy = select(Sheikh).where(Sheikh.phone.like(f"%{phone_stripped}%"))
+                sheikh = session.exec(query_fuzzy).first()
+                
+            if sheikh:
+                return {
+                    "token": f"sheikh-session-token-{sheikh.id}",
+                    "role": "sheikh",
+                    "name": sheikh.name,
+                    "sheikh_id": sheikh.id
+                }
+                
+            raise HTTPException(status_code=401, detail="Phone number is not registered.")
+            
+        raise HTTPException(status_code=400, detail="Invalid role specified.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Login internal error: {str(e)}\n{tb}")
+
 
 # Helper to normalize Arabic letters for robust search
 def normalize_arabic_str(s: str) -> str:
