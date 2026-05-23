@@ -25,7 +25,7 @@ You can run the script manually from the terminal where your Python environment 
 1. Open **Command Prompt** (cmd) or **PowerShell**.
 2. Navigate to the project directory:
    ```cmd
-   cd /d "G:\sanad\sources\P_otor_portal\otor-portal"
+   cd /d "G:\sanad\sources\otor-portal"
    ```
 3. Execute the Python script using one of the following commands:
 
@@ -51,6 +51,6 @@ You can run the script manually from the terminal where your Python environment 
 
 ## Technical Details
 
-* **Script Location:** `G:\sanad\sources\P_otor_portal\otor-portal\sync_databases.py`
+* **Script Location:** `G:\sanad\sources\otor-portal\sync_databases.py`
 * **Access DB Path:** `G:\otor_be.accdb`
-* **Sync Configuration/Snapshot File:** `G:\sanad\sources\P_otor_portal\otor-portal\sync_snapshot.json` (Tracks deletions dynamically)
+* **Sync Configuration/Snapshot File:** `G:\sanad\sources\otor-portal\sync_snapshot.json` (Tracks deletions dynamically)
