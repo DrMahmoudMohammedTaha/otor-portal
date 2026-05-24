@@ -220,7 +220,8 @@
     "exp_cat_prints": "Prints",
     "exp_cat_shipping": "Shipping",
     "exp_cat_utilities": "Utilities",
-    "exp_cat_other": "Other"
+    "exp_cat_other": "Other",
+    "login_social_contact": "Contact Us / Social Media"
   },
   "ar": {
     "login_welcome": "مرحباً بك مجدداً",
@@ -443,6 +444,7 @@
     "exp_cat_prints": "المطبوعات",
     "exp_cat_shipping": "الشحن",
     "exp_cat_utilities": "المرافق والخدمات",
-    "exp_cat_other": "مصروفات أخرى"
+    "exp_cat_other": "مصروفات أخرى",
+    "login_social_contact": "تواصل معنا / وسائل التواصل"
   }
 }

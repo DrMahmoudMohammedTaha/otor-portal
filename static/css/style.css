@@ -1250,3 +1250,74 @@ select.form-control {
     left: 2.5rem;
 }
 
+/* ==========================================
+   SOCIAL LINKS & CONTACT WIDGETS
+   ========================================== */
+.social-links-container {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-glass);
+    color: var(--text-secondary);
+    transition: var(--transition-smooth);
+    cursor: pointer;
+}
+
+.social-link svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.social-link:hover {
+    color: var(--color-primary);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px hsla(37, 55%, 48%, 0.2);
+}
+
+.social-link.facebook-link:hover {
+    color: #1877f2;
+    border-color: rgba(24, 119, 242, 0.35);
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.25);
+    background-color: rgba(24, 119, 242, 0.08);
+}
+
+.social-link.whatsapp-link:hover {
+    color: #25d366;
+    border-color: rgba(37, 211, 102, 0.35);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25);
+    background-color: rgba(37, 211, 102, 0.08);
+}
+
+.login-social-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-glass);
+    padding-top: 1.25rem;
+}
+
+.login-social-footer .social-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
