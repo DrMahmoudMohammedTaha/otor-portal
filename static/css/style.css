@@ -1093,15 +1093,7 @@ select.form-control {
 }
 
 .gallery-card-info {
-    padding: 0.65rem 0.85rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-align: center;
-    border-top: 1px solid var(--border-glass);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: none;
 }
 
 /* Fullscreen zoom backdrop */
