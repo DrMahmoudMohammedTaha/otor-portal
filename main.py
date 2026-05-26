@@ -65,6 +65,19 @@ def get_next_id(session: Session, table_name: str) -> int:
     statement = text(f"SELECT COALESCE(MAX(id), 0) + 1 FROM {table_name}")
     return session.execute(statement).scalar()
 
+# Helper to sync order cost and rest fields based on content records
+def sync_order_cost(order_id: int, session: Session):
+    content_cost_sum = session.execute(
+        text("SELECT COALESCE(SUM(cost * COALESCE(amount, 1)), 0.0) FROM content WHERE order_id = :order_id"),
+        {"order_id": order_id}
+    ).scalar() or 0.0
+    
+    session.execute(
+        text("UPDATE orders SET cost = :cost, rest = :cost - paid, update_date = :now WHERE id = :order_id"),
+        {"cost": content_cost_sum, "now": datetime.now(), "order_id": order_id}
+    )
+    session.commit()
+
 # ==========================================
 # Authentication Endpoints
 # ==========================================
@@ -131,7 +144,7 @@ def normalize_arabic_str(s: str) -> str:
 # ==========================================
 # API Routes: Sheikhs
 # ==========================================
-@app.get("/api/sheikhs", response_model=List[Sheikh])
+@app.get("/api/sheikhs")
 def list_sheikhs(
     search: Optional[str] = None,
     session: Session = Depends(get_session)
@@ -151,9 +164,38 @@ def list_sheikhs(
                 search_norm in phone_norm or 
                 search_norm in city_norm):
                 filtered.append(s)
-        return filtered
+        sheikhs = filtered
         
-    return sheikhs
+    results = []
+    for s in sheikhs:
+        balance = session.execute(
+            text("""
+                SELECT COALESCE(SUM(
+                    COALESCE((SELECT SUM(c.cost * COALESCE(c.amount, 1)) FROM content c WHERE c.order_id = o.id), 0.0) - o.paid
+                ), 0.0)
+                FROM orders o
+                WHERE o.sheikh_id = :id
+            """),
+            {"id": s.id}
+        ).scalar() or 0.0
+        
+        plates = session.execute(
+            text("""
+                SELECT COUNT(*) FROM content 
+                WHERE order_id IN (
+                    SELECT id FROM order_history WHERE sheikh_id = :id OR sheikh_name = :name
+                )
+            """),
+            {"id": s.id, "name": s.name}
+        ).scalar() or 0
+        
+        s_dict = s.model_dump()
+        s_dict["balance"] = balance
+        s_dict["plates"] = plates
+        s_dict["price"] = 65.0
+        results.append(s_dict)
+        
+    return results
 
 @app.get("/api/sheikhs/{id}", response_model=Sheikh)
 def get_sheikh(id: int, session: Session = Depends(get_session)):
@@ -171,8 +213,8 @@ def get_sheikh_stats(id: int, session: Session = Depends(get_session)):
     
     # 1. Total cost from completed orders (ORDER_HISTORY)
     history_cost = session.execute(
-        text("SELECT SUM(cost) FROM order_history WHERE sheikh_name = :name"),
-        {"name": sheikh.name}
+        text("SELECT COALESCE(SUM(cost), 0.0) FROM order_history WHERE sheikh_id = :id OR sheikh_name = :name"),
+        {"id": id, "name": sheikh.name}
     ).scalar() or 0.0
     
     # 2. Total items count (from CONTENT where order_id in order_history)
@@ -180,10 +222,10 @@ def get_sheikh_stats(id: int, session: Session = Depends(get_session)):
         text("""
             SELECT COUNT(*) FROM content 
             WHERE order_id IN (
-                SELECT id FROM order_history WHERE sheikh_name = :name
+                SELECT id FROM order_history WHERE sheikh_id = :id OR sheikh_name = :name
             )
         """),
-        {"name": sheikh.name}
+        {"id": id, "name": sheikh.name}
     ).scalar() or 0
     
     # 3. Active orders count
@@ -192,12 +234,29 @@ def get_sheikh_stats(id: int, session: Session = Depends(get_session)):
         {"id": id}
     ).scalar() or 0
 
+    # 4. Remaining Balance (sum of rest from active orders calculated dynamically)
+    balance = session.execute(
+        text("""
+            SELECT COALESCE(SUM(
+                COALESCE((SELECT SUM(c.cost * COALESCE(c.amount, 1)) FROM content c WHERE c.order_id = o.id), 0.0) - o.paid
+            ), 0.0)
+            FROM orders o
+            WHERE o.sheikh_id = :id
+        """),
+        {"id": id}
+    ).scalar() or 0.0
+
     return {
         "sheikh_id": id,
         "name": sheikh.name,
         "total_historical_cost": history_cost,
         "total_historical_items": items_count,
-        "active_orders_count": active_count
+        "active_orders_count": active_count,
+        # compatibility fields for mobile app
+        "active_count": active_count,
+        "earned": history_cost,
+        "plates": items_count,
+        "balance": balance
     }
 
 @app.post("/api/sheikhs", response_model=Sheikh, dependencies=[Depends(verify_admin)])
@@ -266,6 +325,12 @@ def list_orders(
     for order in orders_list:
         sheikh = session.get(Sheikh, order.sheikh_id) if order.sheikh_id else None
         
+        # Calculate dynamic cost and rest
+        content_cost_sum = float(session.execute(
+            text("SELECT COALESCE(SUM(cost * COALESCE(amount, 1)), 0.0) FROM content WHERE order_id = :order_id"),
+            {"order_id": order.id}
+        ).scalar() or 0.0)
+        
         # Apply search filtering in memory if query is provided
         if search:
             search_norm = normalize_arabic_str(search).lower()
@@ -281,6 +346,8 @@ def list_orders(
                 continue
                 
         order_dict = order.model_dump()
+        order_dict["cost"] = content_cost_sum
+        order_dict["rest"] = content_cost_sum - (order.paid or 0.0)
         order_dict["sheikh_phone"] = sheikh.phone if sheikh else ""
         order_dict["sheikh_city"] = sheikh.city if sheikh else ""
         orders_with_sheikh.append(order_dict)
@@ -327,9 +394,20 @@ def get_order_details(id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Order not found")
     
     sheikh = session.get(Sheikh, order.sheikh_id) if order.sheikh_id else None
+    
+    # Calculate dynamically
+    content_cost_sum = float(session.execute(
+        text("SELECT COALESCE(SUM(cost * COALESCE(amount, 1)), 0.0) FROM content WHERE order_id = :order_id"),
+        {"order_id": order.id}
+    ).scalar() or 0.0)
+    
+    order_dict = order.model_dump()
+    order_dict["cost"] = content_cost_sum
+    order_dict["rest"] = content_cost_sum - (order.paid or 0.0)
+    
     return {
         "archived": False,
-        "order": order,
+        "order": order_dict,
         "sheikh": sheikh
     }
 
@@ -371,6 +449,9 @@ def create_order(order: Orders, session: Session = Depends(get_session)):
     session.add(default_content)
     session.commit()
     
+    # Sync order cost dynamically
+    sync_order_cost(order.id, session)
+    
     session.refresh(order)
     return order
 
@@ -384,7 +465,6 @@ def update_order(id: int, updated_order: Orders, session: Session = Depends(get_
         setattr(order, key, value)
         
     order.update_date = datetime.now()
-    order.rest = (order.cost or 0.0) - (order.paid or 0.0)
     
     if order.sheikh_id:
         sheikh = session.get(Sheikh, order.sheikh_id)
@@ -393,6 +473,10 @@ def update_order(id: int, updated_order: Orders, session: Session = Depends(get_
             
     session.add(order)
     session.commit()
+    
+    # Sync cost and rest to database
+    sync_order_cost(id, session)
+    
     session.refresh(order)
     return order
 
@@ -473,6 +557,8 @@ def create_content(content: Content, session: Session = Depends(get_session)):
     session.add(content)
     session.commit()
     session.refresh(content)
+    if content.order_id:
+        sync_order_cost(content.order_id, session)
     return content
 
 @app.put("/api/content/{id}", response_model=Content, dependencies=[Depends(verify_admin)])
@@ -487,6 +573,8 @@ def update_content(id: int, updated_content: Content, session: Session = Depends
     session.add(content)
     session.commit()
     session.refresh(content)
+    if content.order_id:
+        sync_order_cost(content.order_id, session)
     return content
 
 @app.delete("/api/content/{id}", dependencies=[Depends(verify_admin)])
@@ -494,8 +582,11 @@ def delete_content(id: int, session: Session = Depends(get_session)):
     content = session.get(Content, id)
     if not content:
         raise HTTPException(status_code=404, detail="Content item not found")
+    order_id = content.order_id
     session.delete(content)
     session.commit()
+    if order_id:
+        sync_order_cost(order_id, session)
     return {"detail": "Content item deleted successfully"}
 
 @app.post("/api/content/bulk", dependencies=[Depends(verify_admin)])
@@ -536,6 +627,7 @@ def bulk_insert_content(payload: BulkContentInput, session: Session = Depends(ge
         inserted_count += 1
         
     session.commit()
+    sync_order_cost(payload.order_id, session)
     return {"inserted_count": inserted_count}
 
 # ==========================================
