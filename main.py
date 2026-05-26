@@ -149,51 +149,55 @@ def list_sheikhs(
     search: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
-    query = select(Sheikh)
-    query = query.order_by(Sheikh.name)
-    sheikhs = session.exec(query).all()
-    
-    if search:
-        search_norm = normalize_arabic_str(search).lower()
-        filtered = []
-        for s in sheikhs:
-            name_norm = normalize_arabic_str(s.name or "").lower()
-            phone_norm = normalize_arabic_str(s.phone or "").lower()
-            city_norm = normalize_arabic_str(s.city or "").lower()
-            if (search_norm in name_norm or 
-                search_norm in phone_norm or 
-                search_norm in city_norm):
-                filtered.append(s)
-        sheikhs = filtered
-        
-    results = []
-    for s in sheikhs:
-        balance = session.execute(
-            text("""
-                SELECT COALESCE(SUM(
+    query = text("""
+        SELECT 
+            s.id, s.name, s.info, s.comment, s.gender, s.receiver_name, s.phone, s.country, s.city, s.address, s.insert_date,
+            COALESCE(
+                (SELECT SUM(
                     COALESCE((SELECT SUM(c.cost * COALESCE(c.amount, 1)) FROM content c WHERE c.order_id = o.id), 0.0) - o.paid
-                ), 0.0)
-                FROM orders o
-                WHERE o.sheikh_id = :id
-            """),
-            {"id": s.id}
-        ).scalar() or 0.0
-        
-        plates = session.execute(
-            text("""
-                SELECT COUNT(*) FROM content 
-                WHERE order_id IN (
-                    SELECT id FROM order_history WHERE sheikh_id = :id OR sheikh_name = :name
-                )
-            """),
-            {"id": s.id, "name": s.name}
-        ).scalar() or 0
-        
-        s_dict = s.model_dump()
-        s_dict["balance"] = balance
-        s_dict["plates"] = plates
-        s_dict["price"] = 65.0
-        results.append(s_dict)
+                ) FROM orders o WHERE o.sheikh_id = s.id),
+                0.0
+            ) AS balance,
+            COALESCE(
+                (SELECT COUNT(*) FROM content c WHERE c.order_id IN (
+                    SELECT id FROM order_history WHERE sheikh_id = s.id OR sheikh_name = s.name
+                )),
+                0
+            ) AS plates
+        FROM sheikh s
+        ORDER BY s.name;
+    """)
+    
+    rows = session.execute(query).fetchall()
+    
+    results = []
+    for r in rows:
+        if search:
+            search_norm = normalize_arabic_str(search).lower()
+            name_norm = normalize_arabic_str(r[1] or "").lower()
+            phone_norm = normalize_arabic_str(r[6] or "").lower()
+            city_norm = normalize_arabic_str(r[8] or "").lower()
+            if (search_norm not in name_norm and
+                search_norm not in phone_norm and
+                search_norm not in city_norm):
+                continue
+                
+        results.append({
+            "id": r[0],
+            "name": r[1],
+            "info": r[2],
+            "comment": r[3],
+            "gender": r[4],
+            "receiver_name": r[5],
+            "phone": r[6],
+            "country": r[7],
+            "city": r[8],
+            "address": r[9],
+            "insert_date": r[10],
+            "balance": float(r[11]) if r[11] is not None else 0.0,
+            "plates": int(r[12]) if r[12] is not None else 0,
+            "price": 65.0
+        })
         
     return results
 
@@ -311,33 +315,45 @@ def list_orders(
     search: Optional[str] = None,
     session: Session = Depends(get_session)
 ):
-    query = select(Orders)
+    sql_query = """
+        SELECT 
+            o.id, o.state, o.sheikh_id, o.sheikh_name, o.comment, o.contents, o.paid, o.p_receiver, o.p_phone, o.p_country, o.p_city, o.p_address, o.insert_date, o.update_date, o.degree,
+            s.phone AS sheikh_phone,
+            s.city AS sheikh_city,
+            COALESCE(c.cost_sum, 0.0) AS calculated_cost
+        FROM orders o
+        LEFT JOIN sheikh s ON o.sheikh_id = s.id
+        LEFT JOIN (
+            SELECT order_id, SUM(cost * COALESCE(amount, 1.0)) AS cost_sum
+            FROM content
+            GROUP BY order_id
+        ) c ON c.order_id = o.id
+        WHERE 1=1
+    """
+    params = {}
     if state != "ALL":
-        query = query.where(Orders.state == state)
+        sql_query += " AND o.state = :state"
+        params["state"] = state
     if sheikh_id:
-        query = query.where(Orders.sheikh_id == sheikh_id)
+        sql_query += " AND o.sheikh_id = :sheikh_id"
+        params["sheikh_id"] = sheikh_id
         
-    # Sorted by degree, rest desc, insert_date as in Form_Load
-    query = query.order_by(Orders.degree, Orders.rest.desc(), Orders.insert_date)
-    orders_list = session.exec(query).all()
+    sql_query += " ORDER BY o.degree, (COALESCE(c.cost_sum, 0.0) - o.paid) DESC, o.insert_date"
+    
+    rows = session.execute(text(sql_query), params).fetchall()
     
     orders_with_sheikh = []
-    for order in orders_list:
-        sheikh = session.get(Sheikh, order.sheikh_id) if order.sheikh_id else None
-        
-        # Calculate dynamic cost and rest
-        content_cost_sum = float(session.execute(
-            text("SELECT COALESCE(SUM(cost * COALESCE(amount, 1)), 0.0) FROM content WHERE order_id = :order_id"),
-            {"order_id": order.id}
-        ).scalar() or 0.0)
+    for r in rows:
+        calculated_cost = float(r[17])
+        paid = float(r[6]) if r[6] is not None else 0.0
         
         # Apply search filtering in memory if query is provided
         if search:
             search_norm = normalize_arabic_str(search).lower()
-            name_norm = normalize_arabic_str(order.sheikh_name or "").lower()
-            phone_norm = normalize_arabic_str(order.p_phone or (sheikh.phone if sheikh else "")).lower()
-            city_norm = normalize_arabic_str(order.p_city or (sheikh.city if sheikh else "")).lower()
-            content_norm = normalize_arabic_str(order.contents or "").lower()
+            name_norm = normalize_arabic_str(r[3] or "").lower()
+            phone_norm = normalize_arabic_str(r[8] or (r[15] or "")).lower()
+            city_norm = normalize_arabic_str(r[10] or (r[16] or "")).lower()
+            content_norm = normalize_arabic_str(r[5] or "").lower()
             
             if (search_norm not in name_norm and
                 search_norm not in phone_norm and
@@ -345,12 +361,27 @@ def list_orders(
                 search_norm not in content_norm):
                 continue
                 
-        order_dict = order.model_dump()
-        order_dict["cost"] = content_cost_sum
-        order_dict["rest"] = content_cost_sum - (order.paid or 0.0)
-        order_dict["sheikh_phone"] = sheikh.phone if sheikh else ""
-        order_dict["sheikh_city"] = sheikh.city if sheikh else ""
-        orders_with_sheikh.append(order_dict)
+        orders_with_sheikh.append({
+            "id": r[0],
+            "state": r[1],
+            "sheikh_id": r[2],
+            "sheikh_name": r[3],
+            "comment": r[4],
+            "contents": r[5],
+            "cost": calculated_cost,
+            "paid": paid,
+            "rest": calculated_cost - paid,
+            "p_receiver": r[7],
+            "p_phone": r[8],
+            "p_country": r[9],
+            "p_city": r[10],
+            "p_address": r[11],
+            "insert_date": r[12],
+            "update_date": r[13],
+            "degree": r[14],
+            "sheikh_phone": r[15] or "",
+            "sheikh_city": r[16] or ""
+        })
         
     return orders_with_sheikh
 
