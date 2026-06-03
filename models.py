@@ -125,3 +125,38 @@ class OrderHistory(SQLModel, table=True):
     insert_date: Optional[datetime] = None
     update_date: Optional[datetime] = Field(default_factory=datetime.now)
     degree: Optional[float] = 0.0
+
+# ==========================================
+# 8. QARI
+# ==========================================
+class Qari(SQLModel, table=True):
+    __tablename__ = "qari"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name_full: str
+    info: Optional[str] = None
+    name_other: Optional[str] = None
+    birth_date: Optional[datetime] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    notes: Optional[str] = None
+    degree: Optional[int] = None
+    gender: Optional[str] = None
+
+# ==========================================
+# 9. QARI_EGAZA
+# ==========================================
+class QariEgaza(SQLModel, table=True):
+    __tablename__ = "qari_egaza"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    teacher_id: int = Field(foreign_key="qari.id")
+    student_id: int = Field(foreign_key="qari.id")
+    egaza_date: Optional[datetime] = None
+    qeraa: Optional[str] = None
+    tareq: Optional[str] = None
+    state: Optional[str] = None
+    khatma: Optional[str] = None
+    degree: Optional[int] = None

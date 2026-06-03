@@ -170,12 +170,14 @@ function applyRoleInterface() {
     const adminNav = document.getElementById("admin-nav");
     const sheikhNav = document.getElementById("sheikh-nav");
     const guestNav = document.getElementById("guest-nav");
+    const sanadNav = document.getElementById("sanad-nav");
     const packageBadge = document.getElementById("package-badge-container");
     
     // Default resets
     adminNav.classList.add("hidden");
     sheikhNav.classList.add("hidden");
     if (guestNav) guestNav.classList.add("hidden");
+    if (sanadNav) sanadNav.classList.add("hidden");
     packageBadge.classList.add("hidden");
     
     document.querySelectorAll(".page-section").forEach(s => s.classList.remove("active"));
@@ -194,6 +196,16 @@ function applyRoleInterface() {
         loadSheikhs();
         loadPackageTimer();
         loadExpenses();
+    } else if (currentRole === "sanad") {
+        if (sanadNav) sanadNav.classList.remove("hidden");
+        
+        // Show sanad explorer page
+        document.getElementById("sanad-explorer-page").classList.add("active");
+        const navSanadPortal = document.getElementById("nav-sanad-portal");
+        if (navSanadPortal) navSanadPortal.classList.add("active");
+        
+        // Load Sanad Explorer data
+        initSanadExplorer();
     } else if (currentRole === "sheikh") {
         sheikhNav.classList.remove("hidden");
         
@@ -230,19 +242,31 @@ function setupEventListeners() {
     // ------------------------------------------
     const roleRadioAdmin = document.querySelector('input[name="login-role"][value="admin"]');
     const roleRadioSheikh = document.querySelector('input[name="login-role"][value="sheikh"]');
+    const roleRadioSanad = document.querySelector('input[name="login-role"][value="sanad"]');
     const loginPasswordGroup = document.getElementById("login-password-group");
     const loginPhoneGroup = document.getElementById("login-phone-group");
     const loginForm = document.getElementById("login-form");
     
-    roleRadioAdmin.addEventListener("change", () => {
-        loginPasswordGroup.classList.remove("hidden");
-        loginPhoneGroup.classList.add("hidden");
-    });
+    if (roleRadioAdmin) {
+        roleRadioAdmin.addEventListener("change", () => {
+            loginPasswordGroup.classList.remove("hidden");
+            loginPhoneGroup.classList.add("hidden");
+        });
+    }
     
-    roleRadioSheikh.addEventListener("change", () => {
-        loginPasswordGroup.classList.add("hidden");
-        loginPhoneGroup.classList.remove("hidden");
-    });
+    if (roleRadioSheikh) {
+        roleRadioSheikh.addEventListener("change", () => {
+            loginPasswordGroup.classList.add("hidden");
+            loginPhoneGroup.classList.remove("hidden");
+        });
+    }
+
+    if (roleRadioSanad) {
+        roleRadioSanad.addEventListener("change", () => {
+            loginPasswordGroup.classList.remove("hidden");
+            loginPhoneGroup.classList.add("hidden");
+        });
+    }
     
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -307,6 +331,7 @@ function setupEventListeners() {
             if (targetPage === "sheikhs-page") loadSheikhs();
             if (targetPage === "expenses-page") loadExpenses();
             if (targetPage === "sheikh-portal-page") loadSheikhPortal();
+            if (targetPage === "sanad-explorer-page") initSanadExplorer();
             if (targetPage === "gallery-page") {
                 const activeCategoryTab = document.querySelector("#gallery-category-tabs .tab-item.active");
                 const category = activeCategoryTab ? activeCategoryTab.getAttribute("data-category") : "1_ejaza";
@@ -585,6 +610,9 @@ function setupEventListeners() {
     if (btnSheikhProfile) {
         btnSheikhProfile.addEventListener("click", showLoggedSheikhProfile);
     }
+
+    // Initialize Sanad Event Listeners
+    setupSanadEventListeners();
 }
 
 // ==========================================
@@ -1721,8 +1749,859 @@ async function loadGallery(category) {
             
             grid.appendChild(card);
         });
-    } catch (e) {
-        console.error(e);
         grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--color-danger); padding: 2rem;">${translate("error_gallery", "Error loading gallery images.")}</div>`;
+    }
+}
+
+// ==========================================
+// SANAD EXPLORER WORKSPACE & DATA LOGIC
+// ==========================================
+let allNarrators = [];
+let currentTreeData = null;
+let currentStudentsList = [];
+
+async function initSanadExplorer() {
+    try {
+        const response = await fetchSecure(`/api/sanad/narrators`);
+        allNarrators = await response.json();
+    } catch (e) {
+        console.error("Failed to load narrators database", e);
+    }
+}
+
+function setupSanadEventListeners() {
+    const searchInput = document.getElementById('sheikh-search');
+    const suggestionsBox = document.getElementById('suggestions');
+    const idSearchInput = document.getElementById('sheikh-id-search');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value.trim().toLowerCase();
+            suggestionsBox.innerHTML = '';
+            
+            if (query.length < 2) {
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+
+            const matches = allNarrators.filter(n => n.name.toLowerCase().includes(query));
+            
+            if (matches.length === 0) {
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+
+            matches.slice(0, 10).forEach(match => {
+                const div = document.createElement('div');
+                div.className = 'sanad-suggestion-item';
+                div.innerHTML = `
+                    <div>${escapeHTML(match.name)}</div>
+                    <div class="item-meta">معرّف: ${match.id} | بلد: ${escapeHTML(match.country || '-')} | مدينة: ${escapeHTML(match.city || '-')}</div>
+                `;
+                div.addEventListener('click', () => {
+                    searchInput.value = match.name;
+                    idSearchInput.value = match.id;
+                    suggestionsBox.style.display = 'none';
+                    loadIsnad(match.id);
+                });
+                suggestionsBox.appendChild(div);
+            });
+
+            suggestionsBox.style.display = 'block';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target !== searchInput && e.target !== suggestionsBox) {
+                suggestionsBox.style.display = 'none';
+            }
+        });
+    }
+
+    if (idSearchInput) {
+        idSearchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const val = parseInt(idSearchInput.value);
+                if (val > 0) {
+                    loadIsnad(val);
+                }
+            }
+        });
+    }
+
+    const otherSearchInput = document.getElementById('other-sheikh-search');
+    const otherSuggestionsBox = document.getElementById('other-suggestions');
+    
+    if (otherSearchInput) {
+        otherSearchInput.addEventListener('input', () => {
+            const query = otherSearchInput.value.trim().toLowerCase();
+            otherSuggestionsBox.innerHTML = '';
+            
+            if (query.length < 2) {
+                otherSuggestionsBox.style.display = 'none';
+                return;
+            }
+
+            const currentId = parseInt(document.getElementById('info-id').innerText);
+            const matches = allNarrators.filter(n => n.name.toLowerCase().includes(query) && n.id !== currentId);
+            
+            if (matches.length === 0) {
+                otherSuggestionsBox.style.display = 'none';
+                return;
+            }
+
+            matches.slice(0, 10).forEach(match => {
+                const div = document.createElement('div');
+                div.className = 'sanad-suggestion-item';
+                div.innerHTML = `
+                    <div>${escapeHTML(match.name)}</div>
+                    <div class="item-meta">معرّف: ${match.id} | بلد: ${escapeHTML(match.country || '-')} | مدينة: ${escapeHTML(match.city || '-')}</div>
+                `;
+                div.addEventListener('click', () => {
+                    otherSearchInput.value = match.name;
+                    document.getElementById('other-sheikh-id').value = match.id;
+                    otherSuggestionsBox.style.display = 'none';
+                    
+                    document.getElementById('selected-other-name').innerText = match.name;
+                    document.getElementById('selected-other-id').innerText = match.id;
+                    document.getElementById('selected-other-sheikh-preview').style.display = 'block';
+                });
+                otherSuggestionsBox.appendChild(div);
+            });
+
+            otherSuggestionsBox.style.display = 'block';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target !== otherSearchInput && e.target !== otherSuggestionsBox) {
+                otherSuggestionsBox.style.display = 'none';
+            }
+        });
+    }
+
+    window.addEventListener('click', (e) => {
+        const studentsModal = document.getElementById('students-modal');
+        if (e.target === studentsModal) {
+            closeStudentsModal();
+        }
+        const addModal = document.getElementById('add-sheikh-modal');
+        if (e.target === addModal) {
+            closeAddSheikhModal();
+        }
+        const egazaModal = document.getElementById('add-egaza-modal');
+        if (e.target === egazaModal) {
+            closeAddEgazaModal();
+        }
+        const editEgazaLinkModal = document.getElementById('edit-egaza-link-modal');
+        if (e.target === editEgazaLinkModal) {
+            closeEditEgazaLinkModal();
+        }
+    });
+}
+
+async function loadIsnad(sheikhId) {
+    document.getElementById('welcome-message').style.display = 'none';
+    document.getElementById('loading-spinner').style.display = 'block';
+    document.getElementById('tree-viewport').style.display = 'none';
+    document.getElementById('path-viewport').style.display = 'none';
+    const textViewport = document.getElementById('text-viewport');
+    if (textViewport) textViewport.style.display = 'none';
+
+    let activeView = 'tree';
+    const btnPath = document.getElementById('btn-path');
+    const btnText = document.getElementById('btn-text');
+    if (btnPath && btnPath.classList.contains('active')) {
+        activeView = 'path';
+    } else if (btnText && btnText.classList.contains('active')) {
+        activeView = 'text';
+    }
+
+    document.getElementById('view-toggle-bar').style.display = 'none';
+    document.getElementById('btn-print').style.display = 'none';
+    document.getElementById('btn-students').style.display = 'none';
+    document.getElementById('details-card').style.display = 'none';
+
+    try {
+        const details = await (await fetchSecure(`/api/sanad/narrators/${sheikhId}`)).json();
+        
+        document.getElementById('details-card').style.display = 'block';
+        document.getElementById('sheikh-detail-name').innerText = details.name;
+        document.getElementById('info-id').innerText = details.id;
+        document.getElementById('edit-name').value = details.name || '';
+        document.getElementById('edit-country').value = details.country || '';
+        document.getElementById('edit-city').value = details.city || '';
+        
+        let birthText = details.birth_date || '';
+        if (birthText.includes(' ')) {
+            birthText = birthText.split(' ')[0];
+        }
+        if (birthText === 'N/A' || birthText === 'None') {
+            birthText = '';
+        }
+        document.getElementById('edit-birth').value = birthText;
+        document.getElementById('edit-details').value = details.info || '';
+        document.getElementById('edit-notes').value = details.notes || '';
+
+        currentTreeData = await (await fetchSecure(`/api/sanad/isnad/${sheikhId}`)).json();
+
+        const treeRootDiv = document.getElementById('isnad-tree-root');
+        treeRootDiv.innerHTML = '';
+        
+        const ul = document.createElement('ul');
+        ul.appendChild(renderTreeNodeHTML(currentTreeData, null, 0));
+        treeRootDiv.appendChild(ul);
+
+        const pathViewport = document.getElementById('path-viewport');
+        pathViewport.innerHTML = '';
+        renderPathListHTML(currentTreeData, pathViewport);
+
+        document.getElementById('loading-spinner').style.display = 'none';
+        document.getElementById('view-toggle-bar').style.display = 'flex';
+        document.getElementById('btn-print').style.display = 'flex';
+        document.getElementById('btn-students').style.display = 'flex';
+        switchView(activeView);
+    } catch (e) {
+        document.getElementById('loading-spinner').style.display = 'none';
+        alert("خطأ: لم يتم العثور على الشيخ أو حدث خطأ أثناء الاتصال بالخادم.");
+        console.error(e);
+    }
+}
+
+function renderTreeNodeHTML(node, parentId = null, depth = 0) {
+    const li = document.createElement('li');
+    
+    if (parentId && node.link_id) {
+        const lineConnector = document.createElement('div');
+        lineConnector.className = 'sanad-tree-line-connector';
+        lineConnector.title = "انقر مزدوجاً لتعديل أو حذف هذه الإجازة";
+        lineConnector.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            openEditEgazaLinkModal(node.link_id, parentId, node.id, node.name, node.qeraa || '', node.tareq || '');
+        });
+        li.appendChild(lineConnector);
+    }
+    
+    const nodeDiv = document.createElement('div');
+    let levelClass = 'level-3';
+    if (depth === 0) levelClass = 'level-0';
+    else if (depth === 1) levelClass = 'level-1';
+    else if (depth === 2) levelClass = 'level-2';
+    nodeDiv.className = `sanad-tree-node ${levelClass}`;
+    
+    let metaHtml = '';
+    if (node.qeraa || node.tareq) {
+        metaHtml = `<div class="node-meta">${escapeHTML(node.qeraa || '')} ${node.tareq ? ' - ' + escapeHTML(node.tareq) : ''}</div>`;
+    }
+    
+    let countLabel = '';
+    if (node.teachers && node.teachers.length > 0) {
+        countLabel = ` <span class="toggle-btn" style="color: var(--sanad-accent-gold); font-size: 0.8em; margin-right: 5px; font-weight: bold; cursor: pointer;">[+] (${node.teachers.length})</span>`;
+    }
+
+    nodeDiv.innerHTML = `
+        <div>${escapeHTML(node.name)}${countLabel}</div>
+        ${metaHtml}
+    `;
+    
+    li.appendChild(nodeDiv);
+
+    if (node.teachers && node.teachers.length > 0) {
+        const ul = document.createElement('ul');
+        const isCollapsed = (depth >= 2);
+        if (isCollapsed) {
+            ul.style.display = 'none';
+        } else {
+            const btn = nodeDiv.querySelector('.toggle-btn');
+            if (btn) btn.innerText = ` [-] (${node.teachers.length})`;
+        }
+
+        node.teachers.forEach(teacher => {
+            ul.appendChild(renderTreeNodeHTML(teacher, node.id, depth + 1));
+        });
+        li.appendChild(ul);
+        
+        const toggleBtn = nodeDiv.querySelector('.toggle-btn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (ul.style.display === 'none') {
+                    ul.style.display = 'flex';
+                    toggleBtn.innerText = ` [-] (${node.teachers.length})`;
+                } else {
+                    ul.style.display = 'none';
+                    toggleBtn.innerText = ` [+] (${node.teachers.length})`;
+                }
+            });
+        }
+    }
+
+    nodeDiv.addEventListener('click', (e) => {
+        if (e.target.classList.contains('toggle-btn')) return;
+        loadIsnad(node.id);
+    });
+
+    return li;
+}
+
+function renderPathListHTML(node, container, index = 1) {
+    const div = document.createElement('div');
+    div.className = 'sanad-path-step';
+    
+    let metaText = 'نقطة الانطلاق (أصل السند)';
+    if (node.qeraa || node.tareq) {
+        metaText = `الرواية: ${escapeHTML(node.qeraa || '-')} | الطريق: ${escapeHTML(node.tareq || '-')}`;
+    }
+
+    div.innerHTML = `
+        <div class="sanad-step-num">${index}</div>
+        <div class="sanad-step-details">
+            <div class="sanad-step-name">${escapeHTML(node.name)}</div>
+            <div class="sanad-step-meta">${metaText} (معرّف ID: ${node.id})</div>
+        </div>
+    `;
+    
+    div.addEventListener('click', () => loadIsnad(node.id));
+    container.appendChild(div);
+
+    if (node.teachers && node.teachers.length > 0) {
+        if (node.teachers.length > 1) {
+            const notice = document.createElement('div');
+            notice.style.cssText = 'color: var(--sanad-accent-gold); font-size: 0.85rem; padding-right: 50px; font-weight: bold; font-family: "Amiri"';
+            notice.innerText = `[تفرع السند: يتبع هذا المستوى ${node.teachers.length} شيوخ مختلفين. تم إظهار المسار الأول بالأسفل. شاهد عرض "شجرة السند" لرؤية التفرعات بالكامل]`;
+            container.appendChild(notice);
+        }
+        renderPathListHTML(node.teachers[0], container, index + 1);
+    }
+}
+
+function getSheikhTitle(name, id) {
+    const narrator = allNarrators.find(n => n.id === id);
+    if (narrator && narrator.gender === "Female") {
+        return "الشيخة / " + name;
+    }
+    if (name && (name.startsWith("أم ") || name.startsWith("ام ") || name.startsWith("فاطمة") || name.startsWith("عائشة") || name.startsWith("خديجة"))) {
+        return "الشيخة / " + name;
+    }
+    return "الشيخ / " + name;
+}
+
+function generateIsnadText(node, visited = new Set()) {
+    if (!node || visited.has(node.id)) return "";
+    visited.add(node.id);
+    
+    let text = "";
+    if (node.teachers && node.teachers.length > 0) {
+        const title = getSheikhTitle(node.name, node.id);
+        text += `<p style="margin-bottom: 8px;">تلقى <strong>${escapeHTML(title)}</strong> عن كل من:</p>`;
+        text += `<ol style="margin-right: 25px; margin-bottom: 20px; list-style-type: decimal; padding-right: 15px;">`;
+        node.teachers.forEach((teacher) => {
+            const tTitle = getSheikhTitle(teacher.name, teacher.id);
+            let meta = "";
+            if (teacher.qeraa || teacher.tareq) {
+                meta = ` <span style="color: var(--sanad-text-muted); font-size: 0.85em; font-family: 'Inter', sans-serif;">(بقراءة: ${escapeHTML(teacher.qeraa || '-')}${teacher.tareq ? ' من طريق ' + escapeHTML(teacher.tareq) : ''})</span>`;
+            }
+            text += `<li style="margin-bottom: 4px; font-weight: bold;">${escapeHTML(tTitle)}${meta}</li>`;
+        });
+        text += `</ol>`;
+        
+        node.teachers.forEach((teacher) => {
+            text += generateIsnadText(teacher, visited);
+        });
+    }
+    return text;
+}
+
+function switchView(viewType) {
+    const btnTree = document.getElementById('btn-tree');
+    const btnPath = document.getElementById('btn-path');
+    const btnText = document.getElementById('btn-text');
+    const treeViewport = document.getElementById('tree-viewport');
+    const pathViewport = document.getElementById('path-viewport');
+    const textViewport = document.getElementById('text-viewport');
+
+    btnTree.className = 'sanad-view-btn';
+    btnPath.className = 'sanad-view-btn';
+    if (btnText) btnText.className = 'sanad-view-btn';
+    
+    treeViewport.style.display = 'none';
+    pathViewport.style.display = 'none';
+    if (textViewport) textViewport.style.display = 'none';
+
+    if (viewType === 'tree') {
+        btnTree.className = 'sanad-view-btn active';
+        treeViewport.style.display = 'flex';
+    } else if (viewType === 'path') {
+        btnPath.className = 'sanad-view-btn active';
+        pathViewport.style.display = 'flex';
+    } else if (viewType === 'text') {
+        if (btnText) btnText.className = 'sanad-view-btn active';
+        if (textViewport) {
+            textViewport.style.display = 'block';
+            textViewport.innerHTML = generateIsnadText(currentTreeData);
+            if (textViewport.innerHTML === "") {
+                textViewport.innerHTML = `<div style="text-align: center; color: var(--sanad-text-muted); font-family: 'Amiri', serif; font-size: 1.2rem; padding: 40px 0;">لا يوجد شيوخ مسجلين لهذا الشيخ لعرض نص السند.</div>`;
+            }
+        }
+    }
+}
+
+function printWorkspace() {
+    let sheikhName = "عام";
+    const detailNameEl = document.getElementById('sheikh-detail-name');
+    if (detailNameEl && detailNameEl.innerText && detailNameEl.innerText !== 'بطاقة المعلم') {
+        sheikhName = detailNameEl.innerText.trim();
+    } else if (currentTreeData && currentTreeData.name) {
+        sheikhName = currentTreeData.name.trim();
+    }
+    
+    const originalTitle = document.title;
+    document.title = `شجرة سند - ${sheikhName}`;
+    window.print();
+    document.title = originalTitle;
+}
+
+async function openStudentsModal() {
+    const modal = document.getElementById('students-modal');
+    const searchInput = document.getElementById('students-search');
+    searchInput.value = '';
+    
+    const sheikhName = document.getElementById('sheikh-detail-name').innerText;
+    const sheikhId = document.getElementById('info-id').innerText;
+    document.getElementById('modal-title').innerText = `طلاب الشيخ: ${sheikhName}`;
+    
+    const container = document.getElementById('students-list-container');
+    container.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="sanad-spinner" style="display: block; position: static; margin: 0 auto;"></div></div>';
+    
+    modal.style.display = 'flex';
+    modal.offsetHeight; 
+    modal.classList.add('show');
+    
+    try {
+        const res = await fetchSecure(`/api/sanad/narrators/${sheikhId}/students`);
+        currentStudentsList = await res.json();
+        renderStudentsList(currentStudentsList);
+    } catch (e) {
+        container.innerHTML = '<div class="sanad-no-students-msg">حدث خطأ أثناء تحميل قائمة الطلاب.</div>';
+        console.error(e);
+    }
+}
+
+function closeStudentsModal() {
+    const modal = document.getElementById('students-modal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+function renderStudentsList(list) {
+    const container = document.getElementById('students-list-container');
+    container.innerHTML = '';
+    
+    if (list.length === 0) {
+        container.innerHTML = '<div class="sanad-no-students-msg">لا يوجد طلاب مسجلين لهذا الشيخ.</div>';
+        return;
+    }
+    
+    list.forEach(student => {
+        const div = document.createElement('div');
+        div.className = 'sanad-student-item';
+        
+        let locationInfo = [];
+        if (student.country) locationInfo.push(student.country);
+        if (student.city) locationInfo.push(student.city);
+        const locationText = locationInfo.length > 0 ? ` | ${locationInfo.join(' - ')}` : '';
+        
+        let routeText = '';
+        if (student.qeraa || student.tareq) {
+            routeText = `<div class="sanad-student-route">${escapeHTML(student.qeraa || '')} ${student.tareq ? ' - ' + escapeHTML(student.tareq) : ''}</div>`;
+        }
+        
+        div.innerHTML = `
+            <div class="sanad-student-details">
+                <div class="sanad-student-name">${escapeHTML(student.name)}</div>
+                <div class="sanad-student-meta">معرف ID: ${student.id}${escapeHTML(locationText)}</div>
+            </div>
+            ${routeText}
+        `;
+        
+        div.addEventListener('click', () => {
+            closeStudentsModal();
+            document.getElementById('sheikh-search').value = student.name;
+            document.getElementById('sheikh-id-search').value = student.id;
+            loadIsnad(student.id);
+        });
+        
+        container.appendChild(div);
+    });
+}
+
+function filterStudents() {
+    const query = document.getElementById('students-search').value.trim().toLowerCase();
+    if (!query) {
+        renderStudentsList(currentStudentsList);
+        return;
+    }
+    const filtered = currentStudentsList.filter(s => s.name.toLowerCase().includes(query) || s.id.toString().includes(query));
+    renderStudentsList(filtered);
+}
+
+async function updateSheikhInfo() {
+    const sheikhId = document.getElementById('info-id').innerText;
+    const updatedData = {
+        name: document.getElementById('edit-name').value.trim(),
+        country: document.getElementById('edit-country').value.trim(),
+        city: document.getElementById('edit-city').value.trim(),
+        birth_date: document.getElementById('edit-birth').value.trim(),
+        info: document.getElementById('edit-details').value.trim(),
+        notes: document.getElementById('edit-notes').value.trim()
+    };
+    
+    if (!updatedData.name) {
+        alert("خطأ: يجب إدخال اسم الشيخ.");
+        return;
+    }
+    
+    const updateBtn = document.getElementById('btn-update-sheikh');
+    const originalText = updateBtn.innerText;
+    updateBtn.innerText = '⌛ جاري التحديث...';
+    updateBtn.disabled = true;
+    
+    try {
+        const res = await fetchSecure(`/api/sanad/narrators/${sheikhId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updatedData)
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Failed to update narrator details");
+        }
+        
+        alert("تم تحديث بيانات الشيخ بنجاح!");
+        
+        const narratorIndex = allNarrators.findIndex(n => n.id == sheikhId);
+        if (narratorIndex !== -1) {
+            allNarrators[narratorIndex].name = updatedData.name;
+            allNarrators[narratorIndex].country = updatedData.country;
+            allNarrators[narratorIndex].city = updatedData.city;
+        }
+        
+        document.getElementById('sheikh-detail-name').innerText = updatedData.name;
+        loadIsnad(sheikhId);
+    } catch (e) {
+        alert(`حدث خطأ أثناء التحديث: ${e.message}`);
+        console.error(e);
+    } finally {
+        updateBtn.innerText = originalText;
+        updateBtn.disabled = false;
+    }
+}
+
+async function deleteSheikh() {
+    const sheikhId = document.getElementById('info-id').innerText;
+    const sheikhName = document.getElementById('sheikh-detail-name').innerText;
+    
+    const confirmed = confirm(`هل أنت متأكد تماماً من حذف الشيخ "${sheikhName}" (ID: ${sheikhId})؟\nسيؤدي هذا إلى حذف بياناته وجميع علاقات القراءة (الشيوخ والتلاميذ) المرتبطة به نهائياً.`);
+    if (!confirmed) {
+        return;
+    }
+    
+    const deleteBtn = document.getElementById('btn-delete-sheikh');
+    const originalText = deleteBtn.innerText;
+    deleteBtn.innerText = '⌛ جاري الحذف...';
+    deleteBtn.disabled = true;
+    
+    try {
+        const res = await fetchSecure(`/api/sanad/narrators/${sheikhId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Failed to delete narrator");
+        }
+        
+        alert("تم حذف الشيخ وجميع علاقاته بنجاح!");
+        
+        allNarrators = allNarrators.filter(n => n.id != sheikhId);
+        
+        document.getElementById('sheikh-search').value = '';
+        document.getElementById('sheikh-id-search').value = '';
+        
+        document.getElementById('details-card').style.display = 'none';
+        document.getElementById('welcome-message').style.display = 'block';
+        document.getElementById('tree-viewport').style.display = 'none';
+        document.getElementById('path-viewport').style.display = 'none';
+        document.getElementById('view-toggle-bar').style.display = 'none';
+        document.getElementById('btn-print').style.display = 'none';
+        document.getElementById('btn-students').style.display = 'none';
+        
+    } catch (e) {
+        alert(`حدث خطأ أثناء الحذف: ${e.message}`);
+        console.error(e);
+    } finally {
+        deleteBtn.innerText = originalText;
+        deleteBtn.disabled = false;
+    }
+}
+
+function openAddSheikhModal() {
+    const modal = document.getElementById('add-sheikh-modal');
+    
+    document.getElementById('new-name').value = '';
+    document.getElementById('new-country').value = '';
+    document.getElementById('new-city').value = '';
+    document.getElementById('new-birth').value = '';
+    document.getElementById('new-details').value = '';
+    document.getElementById('new-notes').value = '';
+    
+    modal.style.display = 'flex';
+    modal.offsetHeight;
+    modal.classList.add('show');
+}
+
+function closeAddSheikhModal() {
+    const modal = document.getElementById('add-sheikh-modal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+async function saveNewSheikh() {
+    const name = document.getElementById('new-name').value.trim();
+    const country = document.getElementById('new-country').value.trim();
+    const city = document.getElementById('new-city').value.trim();
+    const birth_date = document.getElementById('new-birth').value.trim();
+    const info = document.getElementById('new-details').value.trim();
+    const notes = document.getElementById('new-notes').value.trim();
+    
+    if (!name) {
+        alert("خطأ: يجب إدخال اسم الشيخ.");
+        return;
+    }
+    
+    const saveBtn = document.getElementById('btn-save-new-sheikh');
+    const originalText = saveBtn.innerText;
+    saveBtn.innerText = '⌛ جاري الإضافة...';
+    saveBtn.disabled = true;
+    
+    try {
+        const res = await fetchSecure('/api/sanad/narrators', {
+            method: 'POST',
+            body: JSON.stringify({ name, country, city, birth_date, info, notes })
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Failed to create narrator");
+        }
+        
+        const data = await res.json();
+        const newId = data.id;
+        
+        alert("تم إضافة الشيخ بنجاح!");
+        closeAddSheikhModal();
+        
+        const newSheikh = {
+            id: newId,
+            name: name,
+            country: country,
+            city: city,
+            gender: "Male"
+        };
+        allNarrators.push(newSheikh);
+        
+        document.getElementById('sheikh-search').value = name;
+        document.getElementById('sheikh-id-search').value = newId;
+        loadIsnad(newId);
+    } catch (e) {
+        alert(`حدث خطأ أثناء الإضافة: ${e.message}`);
+        console.error(e);
+    } finally {
+        saveBtn.innerText = originalText;
+        saveBtn.disabled = false;
+    }
+}
+
+function openAddEgazaModal() {
+    const modal = document.getElementById('add-egaza-modal');
+    const currentName = document.getElementById('sheikh-detail-name').innerText;
+    
+    document.getElementById('egaza-modal-title').innerText = `إضافة إجازة جديدة للشيخ: ${currentName}`;
+    
+    document.getElementById('other-sheikh-search').value = '';
+    document.getElementById('other-sheikh-id').value = '';
+    document.getElementById('egaza-qeraa').value = '';
+    document.getElementById('egaza-tareq').value = '';
+    document.getElementById('selected-other-sheikh-preview').style.display = 'none';
+    
+    modal.style.display = 'flex';
+    modal.offsetHeight;
+    modal.classList.add('show');
+}
+
+function closeAddEgazaModal() {
+    const modal = document.getElementById('add-egaza-modal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+async function saveEgazaRelation() {
+    const currentId = parseInt(document.getElementById('info-id').innerText);
+    const otherId = parseInt(document.getElementById('other-sheikh-id').value);
+    
+    if (!otherId) {
+        alert("خطأ: يرجى البحث واختيار الشيخ الآخر.");
+        return;
+    }
+    
+    const qeraa = document.getElementById('egaza-qeraa').value.trim();
+    const tareq = document.getElementById('egaza-tareq').value.trim();
+    
+    const role = document.querySelector('input[name="egaza-role"]:checked').value;
+    let teacher_id, student_id;
+    if (role === 'current-is-teacher') {
+        teacher_id = currentId;
+        student_id = otherId;
+    } else {
+        teacher_id = otherId;
+        student_id = currentId;
+    }
+    
+    const saveBtn = document.getElementById('btn-save-egaza');
+    const originalText = saveBtn.innerText;
+    saveBtn.innerText = '⌛ جاري الإضافة...';
+    saveBtn.disabled = true;
+    
+    try {
+        const res = await fetchSecure('/api/sanad/egazas', {
+            method: 'POST',
+            body: JSON.stringify({ teacher_id, student_id, qeraa, tareq })
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Failed to create egaza relationship");
+        }
+        
+        alert("تم إضافة الإجازة بنجاح!");
+        closeAddEgazaModal();
+        loadIsnad(currentId);
+    } catch (e) {
+        alert(`حدث خطأ أثناء إضافة الإجازة: ${e.message}`);
+        console.error(e);
+    } finally {
+        saveBtn.innerText = originalText;
+        saveBtn.disabled = false;
+    }
+}
+
+function openEditEgazaLinkModal(linkId, studentId, teacherId, teacherName, qeraa, tareq) {
+    const modal = document.getElementById('edit-egaza-link-modal');
+    
+    document.getElementById('edit-link-id').value = linkId;
+    document.getElementById('edit-link-student-id').value = studentId;
+    document.getElementById('edit-link-teacher-id').value = teacherId;
+    
+    const studentNarrator = allNarrators.find(n => n.id === studentId);
+    const studentName = studentNarrator ? studentNarrator.name : `غير معروف (ID: ${studentId})`;
+    
+    document.getElementById('edit-link-teacher-name').innerText = teacherName;
+    document.getElementById('edit-link-student-name').innerText = studentName;
+    
+    document.getElementById('edit-link-qeraa').value = qeraa;
+    document.getElementById('edit-link-tareq').value = tareq;
+    
+    modal.style.display = 'flex';
+    modal.offsetHeight;
+    modal.classList.add('show');
+}
+
+function closeEditEgazaLinkModal() {
+    const modal = document.getElementById('edit-egaza-link-modal');
+    modal.classList.remove('show');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+async function saveUpdatedEgazaLink() {
+    const linkId = document.getElementById('edit-link-id').value;
+    const qeraa = document.getElementById('edit-link-qeraa').value.trim();
+    const tareq = document.getElementById('edit-link-tareq').value.trim();
+    
+    const saveBtn = document.getElementById('btn-update-egaza-link');
+    const originalText = saveBtn.innerText;
+    saveBtn.innerText = '⌛ جاري الحفظ...';
+    saveBtn.disabled = true;
+    
+    try {
+        const res = await fetchSecure(`/api/sanad/egazas/${linkId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ qeraa, tareq })
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Failed to update Egaza");
+        }
+        
+        alert("تم تحديث بيانات الإجازة بنجاح!");
+        closeEditEgazaLinkModal();
+        
+        const mainSheikhId = parseInt(document.getElementById('info-id').innerText);
+        if (mainSheikhId > 0) {
+            loadIsnad(mainSheikhId);
+        }
+    } catch (e) {
+        alert(`حدث خطأ أثناء الحفظ: ${e.message}`);
+        console.error(e);
+    } finally {
+        saveBtn.innerText = originalText;
+        saveBtn.disabled = false;
+    }
+}
+
+async function deleteEgazaLink() {
+    const linkId = document.getElementById('edit-link-id').value;
+    const teacherName = document.getElementById('edit-link-teacher-name').innerText;
+    const studentName = document.getElementById('edit-link-student-name').innerText;
+    
+    const confirmed = confirm(`هل أنت متأكد من حذف هذه الإجازة بين المعلم "${teacherName}" والطالب "${studentName}"؟\nسيؤدي هذا إلى قطع اتصال السند بينهما في هذا المسار.`);
+    if (!confirmed) {
+        return;
+    }
+    
+    const deleteBtn = document.getElementById('btn-delete-egaza-link');
+    const originalText = deleteBtn.innerText;
+    deleteBtn.innerText = '⌛ جاري الحذف...';
+    deleteBtn.disabled = true;
+    
+    try {
+        const res = await fetchSecure(`/api/sanad/egazas/${linkId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.detail || "Failed to delete Egaza");
+        }
+        
+        alert("تم حذف الإجازة وقطع مسار السند بنجاح!");
+        closeEditEgazaLinkModal();
+        
+        const mainSheikhId = parseInt(document.getElementById('info-id').innerText);
+        if (mainSheikhId > 0) {
+            loadIsnad(mainSheikhId);
+        }
+    } catch (e) {
+        alert(`حدث خطأ أثناء الحذف: ${e.message}`);
+        console.error(e);
+    } finally {
+        deleteBtn.innerText = originalText;
+        deleteBtn.disabled = false;
     }
 }

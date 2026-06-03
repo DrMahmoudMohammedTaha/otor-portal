@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 # Import local configuration and models
 from database import get_session, engine
-from models import Sheikh, Orders, Content, Expenses, Money, Package, OrderHistory
+from models import Sheikh, Orders, Content, Expenses, Money, Package, OrderHistory, Qari, QariEgaza
 
 app = FastAPI(
     title="OTOR Manager API",
@@ -28,8 +28,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load Admin credentials
+# Load Admin and Sanad credentials
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+SANAD_PASSWORD = os.getenv("SANAD_PASSWORD", "sanad123")
 
 # Base path for local system sheikh folders
 SHEIKH_BASE_PATH = r"G:\sheikh"
@@ -38,7 +39,7 @@ SHEIKH_BASE_PATH = r"G:\sheikh"
 # Authentication Payloads & Helpers
 # ==========================================
 class LoginRequest(BaseModel):
-    role: str  # "admin" or "sheikh"
+    role: str  # "admin", "sheikh" or "sanad"
     password: Optional[str] = None
     phone: Optional[str] = None
 
@@ -58,6 +59,14 @@ def verify_admin(authorization: Optional[str] = Header(None)):
         raise HTTPException(
             status_code=403, 
             detail="Administrative authorization credentials required"
+        )
+
+# Dependency to enforce Sanad or Admin permissions
+def verify_sanad_or_admin(authorization: Optional[str] = Header(None)):
+    if not authorization or authorization not in ("Bearer admin-session-token", "Bearer sanad-session-token"):
+        raise HTTPException(
+            status_code=403, 
+            detail="Sanad Explorer or Administrative authorization credentials required"
         )
 
 # Helper to generate the next integer primary key for non-serial tables
@@ -95,6 +104,16 @@ def login(payload: LoginRequest, session: Session = Depends(get_session)):
                     "sheikh_id": None
                 }
             raise HTTPException(status_code=401, detail="Invalid admin password.")
+            
+        elif role == "sanad":
+            if payload.password == SANAD_PASSWORD:
+                return {
+                    "token": "sanad-session-token",
+                    "role": "sanad",
+                    "name": "Sanad Explorer Operator",
+                    "sheikh_id": None
+                }
+            raise HTTPException(status_code=401, detail="Invalid sanad passcode.")
             
         elif role == "sheikh":
             if not payload.phone or not payload.phone.strip():
@@ -771,6 +790,321 @@ def list_gallery_images(category: str):
         return sorted(images)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================================
+# API Routes: Sanad Explorer Integration
+# ==========================================
+
+class SanadNarratorCreate(BaseModel):
+    name: str
+    country: str = ""
+    city: str = ""
+    birth_date: str = ""
+    info: str = ""
+    notes: str = ""
+
+class SanadNarratorUpdate(BaseModel):
+    name: str
+    country: str = ""
+    city: str = ""
+    birth_date: str = ""
+    info: str = ""
+    notes: str = ""
+
+class SanadEgazaCreate(BaseModel):
+    teacher_id: int
+    student_id: int
+    qeraa: str = ""
+    tareq: str = ""
+
+class SanadEgazaUpdate(BaseModel):
+    qeraa: str = ""
+    tareq: str = ""
+
+def parse_date(date_str: str):
+    if not date_str or date_str.strip().lower() in ["n/a", "none", "null", ""]:
+        return None
+    date_str = date_str.strip()
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y/%m/%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            pass
+    if date_str.isdigit() and len(date_str) == 4:
+        try:
+            return datetime(int(date_str), 1, 1)
+        except ValueError:
+            pass
+    return None
+
+@app.get("/api/sanad/narrators")
+def api_sanad_list_narrators(session: Session = Depends(get_session)):
+    try:
+        statement = select(Qari).order_by(Qari.name_full)
+        results = session.exec(statement).all()
+        return [
+            {
+                "id": r.id,
+                "name": r.name_full if r.name_full else f"Unnamed (ID: {r.id})",
+                "country": r.country if r.country else "",
+                "city": r.city if r.city else "",
+                "gender": r.gender if r.gender else "Male"
+            } for r in results
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.get("/api/sanad/narrators/{id}")
+def api_sanad_get_narrator(id: int, session: Session = Depends(get_session)):
+    try:
+        qari = session.get(Qari, id)
+        if not qari:
+            raise HTTPException(status_code=404, detail="Narrator not found")
+        
+        # Clean birth date to string format
+        birth_str = ""
+        if qari.birth_date:
+            birth_str = str(qari.birth_date.date())
+            
+        return {
+            "id": qari.id,
+            "name": qari.name_full,
+            "info": qari.info if qari.info else "",
+            "birth_date": birth_str,
+            "country": qari.country if qari.country else "",
+            "city": qari.city if qari.city else "",
+            "address": qari.address if qari.address else "",
+            "phone": qari.phone if qari.phone else "",
+            "notes": qari.notes if qari.notes else "",
+            "degree": qari.degree if qari.degree is not None else "",
+            "gender": qari.gender if qari.gender else "Male"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.post("/api/sanad/narrators", dependencies=[Depends(verify_sanad_or_admin)])
+def api_sanad_create_narrator(payload: SanadNarratorCreate, session: Session = Depends(get_session)):
+    try:
+        if not payload.name.strip():
+            raise HTTPException(status_code=400, detail="Name cannot be empty")
+        
+        qari = Qari(
+            name_full=payload.name.strip(),
+            country=payload.country.strip(),
+            city=payload.city.strip(),
+            birth_date=parse_date(payload.birth_date),
+            info=payload.info.strip(),
+            notes=payload.notes.strip(),
+            gender="Male"
+        )
+        session.add(qari)
+        session.commit()
+        session.refresh(qari)
+        return {"status": "success", "id": qari.id, "message": "Narrator created successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.put("/api/sanad/narrators/{id}", dependencies=[Depends(verify_sanad_or_admin)])
+def api_sanad_update_narrator(id: int, payload: SanadNarratorUpdate, session: Session = Depends(get_session)):
+    try:
+        qari = session.get(Qari, id)
+        if not qari:
+            raise HTTPException(status_code=404, detail="Narrator not found")
+        
+        qari.name_full = payload.name.strip()
+        qari.country = payload.country.strip()
+        qari.city = payload.city.strip()
+        qari.birth_date = parse_date(payload.birth_date)
+        qari.info = payload.info.strip()
+        qari.notes = payload.notes.strip()
+        
+        session.add(qari)
+        session.commit()
+        return {"status": "success", "message": "Narrator details updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.delete("/api/sanad/narrators/{id}", dependencies=[Depends(verify_sanad_or_admin)])
+def api_sanad_delete_narrator(id: int, session: Session = Depends(get_session)):
+    try:
+        qari = session.get(Qari, id)
+        if not qari:
+            raise HTTPException(status_code=404, detail="Narrator not found")
+        
+        session.delete(qari)
+        session.commit()
+        return {"status": "success", "message": "Narrator and relations deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.get("/api/sanad/isnad/{id}")
+def api_sanad_get_isnad(id: int, session: Session = Depends(get_session)):
+    try:
+        qari = session.get(Qari, id)
+        if not qari:
+            raise HTTPException(status_code=404, detail="Narrator not found")
+            
+        all_qaris = session.exec(select(Qari.id, Qari.name_full)).all()
+        qari_cache = {q_id: (name if name else f"Unknown Sheikh (ID: {q_id})") for q_id, name in all_qaris}
+        
+        all_egazas = session.exec(select(QariEgaza.id, QariEgaza.teacher_id, QariEgaza.student_id, QariEgaza.qeraa, QariEgaza.tareq)).all()
+        egaza_cache = {}
+        for l_id, t_id, s_id, qe, ta in all_egazas:
+            if not t_id or not s_id:
+                continue
+            if s_id not in egaza_cache:
+                egaza_cache[s_id] = []
+            egaza_cache[s_id].append((l_id, t_id, qe or "", ta or ""))
+            
+        visited_globally = set()
+        
+        def get_qari_name(q_id: int) -> str:
+            return qari_cache.get(q_id, f"Unknown Sheikh (ID: {q_id})")
+
+        def traverse(q_id: int, visited_set: set, depth: int = 0) -> dict:
+            q_name = get_qari_name(q_id)
+            if depth >= 3:
+                return {"id": q_id, "name": q_name, "teachers": []}
+                
+            node = {"id": q_id, "name": q_name, "teachers": []}
+            if q_id in visited_set:
+                node["teachers"].append({
+                    "id": -1,
+                    "name": "[CYCLE DETECTED - LOOP DETECTED]",
+                    "qeraa": "",
+                    "tareq": "",
+                    "teachers": []
+                })
+                return node
+                
+            if q_id in visited_globally:
+                node["name"] += " (مكرر - تم عرضه في مسار آخر)"
+                node["collapsed"] = True
+                return node
+                
+            visited_globally.add(q_id)
+            new_visited = visited_set | {q_id}
+            
+            records = egaza_cache.get(q_id, [])
+            for link_id, teacher_id, qeraa, tareq in records:
+                teacher_tree = traverse(teacher_id, new_visited, depth + 1)
+                teacher_tree["link_id"] = link_id
+                teacher_tree["qeraa"] = qeraa
+                teacher_tree["tareq"] = tareq
+                node["teachers"].append(teacher_tree)
+                
+            return node
+
+        tree = traverse(id, set(), 0)
+        return tree
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database tree query failed: {e}")
+
+@app.get("/api/sanad/narrators/{id}/students")
+def api_sanad_get_students(id: int, session: Session = Depends(get_session)):
+    try:
+        statement = (
+            select(QariEgaza.id, Qari.id, Qari.name_full, Qari.country, Qari.city, QariEgaza.qeraa, QariEgaza.tareq)
+            .join(Qari, QariEgaza.student_id == Qari.id)
+            .where(QariEgaza.teacher_id == id)
+            .order_by(Qari.name_full)
+        )
+        results = session.execute(statement).fetchall()
+        
+        students = []
+        for link_id, s_id, s_name, country, city, qeraa, tareq in results:
+            students.append({
+                "id": s_id,
+                "name": s_name if s_name else f"Unnamed (ID: {s_id})",
+                "country": country if country else "",
+                "city": city if city else "",
+                "qeraa": qeraa if qeraa else "",
+                "tareq": tareq if tareq else ""
+            })
+        return students
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.post("/api/sanad/egazas", dependencies=[Depends(verify_sanad_or_admin)])
+def api_sanad_create_egaza(payload: SanadEgazaCreate, session: Session = Depends(get_session)):
+    try:
+        if payload.teacher_id == payload.student_id:
+            raise HTTPException(status_code=400, detail="A Sheikh cannot give an Egaza to themselves")
+
+        teacher = session.get(Qari, payload.teacher_id)
+        student = session.get(Qari, payload.student_id)
+        if not teacher or not student:
+            raise HTTPException(status_code=400, detail="Teacher or Student ID not found")
+            
+        statement = select(func.count(QariEgaza.id)).where(
+            and_(
+                QariEgaza.teacher_id == payload.teacher_id,
+                QariEgaza.student_id == payload.student_id,
+                QariEgaza.qeraa == payload.qeraa.strip(),
+                QariEgaza.tareq == payload.tareq.strip()
+            )
+        )
+        exists = session.exec(statement).one() > 0
+        if exists:
+            raise HTTPException(status_code=400, detail="This Egaza relationship already exists")
+            
+        new_egaza = QariEgaza(
+            teacher_id=payload.teacher_id,
+            student_id=payload.student_id,
+            qeraa=payload.qeraa.strip(),
+            tareq=payload.tareq.strip()
+        )
+        session.add(new_egaza)
+        session.commit()
+        session.refresh(new_egaza)
+        return {"status": "success", "id": new_egaza.id, "message": "Egaza relationship created successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.put("/api/sanad/egazas/{link_id}", dependencies=[Depends(verify_sanad_or_admin)])
+def api_sanad_update_egaza(link_id: int, payload: SanadEgazaUpdate, session: Session = Depends(get_session)):
+    try:
+        egaza = session.get(QariEgaza, link_id)
+        if not egaza:
+            raise HTTPException(status_code=404, detail="Egaza relationship not found")
+            
+        egaza.qeraa = payload.qeraa.strip()
+        egaza.tareq = payload.tareq.strip()
+        session.add(egaza)
+        session.commit()
+        return {"status": "success", "message": "Egaza relationship updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
+
+@app.delete("/api/sanad/egazas/{link_id}", dependencies=[Depends(verify_sanad_or_admin)])
+def api_sanad_delete_egaza(link_id: int, session: Session = Depends(get_session)):
+    try:
+        egaza = session.get(QariEgaza, link_id)
+        if not egaza:
+            raise HTTPException(status_code=404, detail="Egaza relationship not found")
+            
+        session.delete(egaza)
+        session.commit()
+        return {"status": "success", "message": "Egaza relationship deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {e}")
 
 
 # ==========================================

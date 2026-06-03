@@ -6,8 +6,722 @@
     <title>OTOR - Quran Certification Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        :root {
+            --sanad-bg-page: #FAF7F2;
+            --sanad-bg-card: #FFFFFF;
+            --sanad-text-main: #2C1D11;
+            --sanad-text-muted: #6B5542;
+            --sanad-accent-gold: #C5A059;
+            --sanad-accent-gold-hover: #AA833C;
+            --sanad-border-color: #E6DFD3;
+            --sanad-tree-line: #C5A059;
+        }
+
+        #sanad-explorer-page {
+            font-family: 'Inter', 'Amiri', serif;
+            background-color: var(--sanad-bg-page);
+            color: var(--sanad-text-main);
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+        }
+
+        #sanad-explorer-page.active {
+            display: flex;
+        }
+
+        .sanad-main-container {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            flex-grow: 1;
+        }
+
+        .sanad-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sanad-card {
+            background-color: var(--sanad-bg-card);
+            border: 1px solid var(--sanad-border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(62, 48, 32, 0.05);
+        }
+
+        .sanad-card-title {
+            font-family: 'Amiri', serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--sanad-accent-gold);
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--sanad-border-color);
+            padding-bottom: 8px;
+        }
+
+        .sanad-form-group {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .sanad-form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--sanad-text-muted);
+            margin-bottom: 6px;
+        }
+
+        .sanad-form-control {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 0.95rem;
+            border: 1px solid var(--sanad-border-color);
+            border-radius: 8px;
+            background-color: #FCFAF7;
+            color: var(--sanad-text-main);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .sanad-form-control:focus {
+            border-color: var(--sanad-accent-gold);
+            box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+        }
+
+        .sanad-suggestions-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--sanad-bg-card);
+            border: 1px solid var(--sanad-accent-gold);
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .sanad-suggestion-item {
+            padding: 10px 15px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-align: right;
+            border-bottom: 1px solid #FAF7F2;
+            transition: background-color 0.2s;
+        }
+
+        .sanad-suggestion-item:hover {
+            background-color: #FAF5EB;
+        }
+
+        .sanad-suggestion-item .item-meta {
+            font-size: 0.75rem;
+            color: var(--sanad-text-muted);
+            margin-top: 2px;
+        }
+
+        .sanad-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            font-size: 0.9rem;
+        }
+
+        .sanad-info-item {
+            background-color: #FAF9F6;
+            padding: 10px;
+            border-radius: 6px;
+            border-right: 3px solid var(--sanad-accent-gold);
+        }
+
+        .sanad-info-item .label {
+            font-size: 0.75rem;
+            color: var(--sanad-text-muted);
+            margin-bottom: 2px;
+            font-weight: 600;
+        }
+
+        .sanad-info-item .val {
+            font-family: 'Amiri', serif;
+            font-size: 1.05rem;
+            font-weight: bold;
+        }
+
+        .sanad-info-full {
+            grid-column: span 2;
+        }
+
+        .sanad-workspace {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sanad-workspace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            direction: ltr;
+        }
+
+        .sanad-view-toggle {
+            display: flex;
+            background-color: #E6DFD3;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--sanad-border-color);
+        }
+
+        .sanad-view-btn {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border: none;
+            background: none;
+            color: var(--sanad-text-muted);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .sanad-view-btn.active {
+            background-color: var(--sanad-bg-card);
+            color: var(--sanad-text-main);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .sanad-print-btn {
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border: 1px solid var(--sanad-accent-gold);
+            background-color: var(--sanad-bg-card);
+            color: var(--sanad-accent-gold);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sanad-print-btn:hover {
+            background-color: var(--sanad-accent-gold);
+            color: #FFFFFF;
+            box-shadow: 0 4px 10px rgba(197, 160, 89, 0.2);
+        }
+
+        .sanad-canvas-card {
+            background-color: var(--sanad-bg-card);
+            border: 1px solid var(--sanad-border-color);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(62, 48, 32, 0.05);
+            min-height: 500px;
+            overflow: auto;
+            position: relative;
+        }
+
+        .sanad-tree-container {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            direction: rtl;
+        }
+
+        .sanad-tree ul {
+            padding-right: 25px;
+            margin: 0;
+            list-style: none;
+            position: relative;
+        }
+
+        .sanad-tree li {
+            position: relative;
+            padding: 6px 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .sanad-tree li::before {
+            display: none;
+        }
+
+        .sanad-tree-line-connector {
+            position: absolute;
+            top: 13px;
+            right: -15px;
+            width: 15px;
+            height: 10px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .sanad-tree-line-connector::before {
+            content: '';
+            position: absolute;
+            top: 4px;
+            right: 0;
+            width: 100%;
+            border-top: 2px solid var(--sanad-tree-line);
+            transition: border-color 0.2s, border-width 0.2s;
+        }
+        
+        .sanad-tree-line-connector:hover::before {
+            border-top: 3px solid var(--sanad-accent-gold);
+        }
+
+        .sanad-tree li::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -15px;
+            border-right: 2px solid var(--sanad-tree-line);
+            height: 100%;
+        }
+
+        .sanad-tree li:last-child::after {
+            height: 18px;
+        }
+
+        .sanad-tree li:only-child::after {
+            display: none;
+        }
+
+        #isnad-tree-root > ul > li > .sanad-tree-line-connector,
+        #isnad-tree-root > ul > li::after {
+            display: none;
+        }
+        
+        #isnad-tree-root > ul {
+            padding-right: 0;
+        }
+
+        .sanad-tree-node {
+            border: 2px solid var(--sanad-accent-gold);
+            padding: 6px 10px;
+            text-decoration: none;
+            color: var(--sanad-text-main);
+            font-family: 'Amiri', serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: inline-block;
+            border-radius: 8px;
+            background: #FCFAF6;
+            transition: all 0.3s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+            cursor: pointer;
+            min-width: 110px;
+        }
+
+        .sanad-tree-node:hover {
+            transform: translateY(-3px);
+        }
+
+        .sanad-tree-node.level-0 {
+            background: #FCFAF6;
+            border-color: var(--sanad-accent-gold);
+            color: var(--sanad-text-main);
+        }
+        .sanad-tree-node.level-0:hover {
+            background: var(--sanad-accent-gold);
+            border-color: var(--sanad-text-main);
+            color: #FFFFFF;
+            box-shadow: 0 6px 15px rgba(197, 160, 89, 0.3);
+        }
+
+        .sanad-tree-node.level-1 {
+            background: #EFF4EE;
+            border-color: #9CB595;
+            color: #20331C;
+        }
+        .sanad-tree-node.level-1:hover {
+            background: #9CB595;
+            border-color: #20331C;
+            color: #FFFFFF;
+            box-shadow: 0 6px 15px rgba(156, 181, 149, 0.3);
+        }
+        .sanad-tree-node.level-1 .node-meta {
+            color: #5C7556;
+            border-top-color: rgba(156, 181, 149, 0.4);
+        }
+
+        .sanad-tree-node.level-2 {
+            background: #EAF2F7;
+            border-color: #8FAEC4;
+            color: #162C3D;
+        }
+        .sanad-tree-node.level-2:hover {
+            background: #8FAEC4;
+            border-color: #162C3D;
+            color: #FFFFFF;
+            box-shadow: 0 6px 15px rgba(143, 174, 196, 0.3);
+        }
+        .sanad-tree-node.level-2 .node-meta {
+            color: #4C6A80;
+            border-top-color: rgba(143, 174, 196, 0.4);
+        }
+
+        .sanad-tree-node.level-3 {
+            background: #FAF0E6;
+            border-color: #D1B198;
+            color: #3C2411;
+        }
+        .sanad-tree-node.level-3:hover {
+            background: #D1B198;
+            border-color: #3C2411;
+            color: #FFFFFF;
+            box-shadow: 0 6px 15px rgba(209, 177, 152, 0.3);
+        }
+        .sanad-tree-node.level-3 .node-meta {
+            color: #8C6A50;
+            border-top-color: rgba(209, 177, 152, 0.4);
+        }
+
+        .sanad-tree-node .node-meta {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 600;
+            color: var(--sanad-text-muted);
+            margin-top: 2px;
+            border-top: 1px dotted var(--sanad-border-color);
+            padding-top: 2px;
+        }
+
+        .sanad-tree-node:hover .node-meta {
+            color: #FFFFFF;
+            border-top-color: rgba(255,255,255,0.4);
+        }
+
+        .sanad-path-container {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px 0;
+        }
+
+        .sanad-path-step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background-color: #FCFAF7;
+            border: 1px solid var(--sanad-border-color);
+            border-radius: 8px;
+            padding: 15px 20px;
+            transition: transform 0.2s;
+        }
+
+        .sanad-path-step:hover {
+            transform: translateX(-4px);
+            border-color: var(--sanad-accent-gold);
+        }
+
+        .sanad-step-num {
+            background-color: var(--sanad-accent-gold);
+            color: #FFFFFF;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .sanad-step-details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .sanad-step-name {
+            font-family: 'Amiri', serif;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .sanad-step-meta {
+            font-size: 0.8rem;
+            color: var(--sanad-text-muted);
+        }
+
+        .sanad-welcome-msg {
+            text-align: center;
+            color: var(--sanad-text-muted);
+            font-family: 'Amiri', serif;
+            font-size: 1.4rem;
+            margin-top: 150px;
+        }
+
+        .sanad-welcome-icon {
+            font-size: 3rem;
+            color: var(--sanad-accent-gold);
+            margin-bottom: 15px;
+        }
+
+        .sanad-spinner {
+            border: 4px solid rgba(197, 160, 89, 0.1);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border-left-color: var(--sanad-accent-gold);
+            animation: sanad-spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -22px;
+            margin-left: -22px;
+            display: none;
+        }
+
+        @keyframes sanad-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .sanad-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(44, 29, 17, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sanad-modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .sanad-modal-content {
+            background-color: var(--sanad-bg-card);
+            border: 1px solid var(--sanad-border-color);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+        }
+        .sanad-modal-overlay.show .sanad-modal-content {
+            transform: translateY(0);
+        }
+
+        .sanad-modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--sanad-border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #FAF7F2;
+        }
+        .sanad-modal-header h3 {
+            font-family: 'Amiri', serif;
+            font-size: 1.4rem;
+            color: var(--sanad-text-main);
+            margin: 0;
+        }
+        .sanad-modal-close {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--sanad-text-muted);
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+        .sanad-modal-close:hover {
+            color: #D32F2F;
+        }
+
+        .sanad-modal-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .sanad-students-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            max-height: 450px;
+            padding-left: 5px;
+        }
+        
+        .sanad-student-item {
+            background-color: #FAF9F6;
+            border: 1px solid var(--sanad-border-color);
+            border-radius: 10px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .sanad-student-item:hover {
+            border-color: var(--sanad-accent-gold);
+            background-color: #FAF5EB;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(197, 160, 89, 0.1);
+        }
+
+        .sanad-student-details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            text-align: right;
+        }
+        .sanad-student-name {
+            font-family: 'Amiri', serif;
+            font-size: 1.15rem;
+            font-weight: bold;
+            color: var(--sanad-text-main);
+        }
+        .sanad-student-meta {
+            font-size: 0.8rem;
+            color: var(--sanad-text-muted);
+        }
+        
+        .sanad-student-route {
+            font-size: 0.75rem;
+            background-color: rgba(197, 160, 89, 0.15);
+            color: var(--sanad-accent-gold-hover);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            max-width: 180px;
+            text-align: center;
+            word-break: break-all;
+        }
+        
+        .sanad-no-students-msg {
+            text-align: center;
+            color: var(--sanad-text-muted);
+            font-family: 'Amiri', serif;
+            font-size: 1.2rem;
+            padding: 30px 10px;
+        }
+
+        .sanad-form-control-edit {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 0.9rem;
+            border: 1px solid var(--sanad-border-color);
+            border-radius: 6px;
+            background-color: #FFFFFF;
+            color: var(--sanad-text-main);
+            outline: none;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            margin-top: 4px;
+        }
+        .sanad-form-control-edit:focus {
+            border-color: var(--sanad-accent-gold);
+            box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.12);
+        }
+        
+        .sanad-update-btn {
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: none;
+            background-color: var(--sanad-accent-gold);
+            color: #FFFFFF;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sanad-update-btn:hover {
+            background-color: var(--sanad-accent-gold-hover);
+            box-shadow: 0 4px 12px rgba(197, 160, 89, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .sanad-delete-btn {
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: 1px solid #D32F2F;
+            background-color: var(--sanad-bg-card);
+            color: #D32F2F;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sanad-delete-btn:hover {
+            background-color: #D32F2F;
+            color: #FFFFFF;
+            box-shadow: 0 4px 12px rgba(211, 47, 47, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .sanad-add-btn {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border: 1px solid var(--sanad-accent-gold);
+            background-color: var(--sanad-bg-card);
+            color: var(--sanad-accent-gold);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .sanad-add-btn:hover {
+            background-color: var(--sanad-accent-gold);
+            color: #FFFFFF;
+            box-shadow: 0 2px 8px rgba(197, 160, 89, 0.2);
+        }
+
+        .sanad-actions-container {
+            grid-column: span 2;
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+        .sanad-actions-container button {
+            width: 100%;
+            justify-content: center;
+            padding: 12px !important;
+            font-size: 0.95rem !important;
+        }
+    </style>
 </head>
 <body>
 
@@ -39,6 +753,10 @@
                     <label class="role-option" id="label-role-sheikh">
                         <input type="radio" name="login-role" value="sheikh">
                         <span data-i18n="login_sheikh_role">Partner Sheikh</span>
+                    </label>
+                    <label class="role-option" id="label-role-sanad">
+                        <input type="radio" name="login-role" value="sanad">
+                        <span data-i18n="login_sanad_role">Sanad Explorer</span>
                     </label>
                 </div>
                 
@@ -134,6 +852,12 @@
                     </svg>
                     <span data-i18n="nav_gallery">Gallery Showcase</span>
                 </a>
+                <a href="#" class="nav-item" data-page="sanad-explorer-page" id="nav-sanad-admin">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    <span data-i18n="nav_sanad">Sanad Explorer</span>
+                </a>
             </nav>
 
             <!-- SHEIKH MENU -->
@@ -148,6 +872,24 @@
                     <span data-i18n="sheikh_portal_title">My Certificates</span>
                 </a>
                 <a href="#" class="nav-item" data-page="gallery-page" id="nav-gallery-sheikh">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span data-i18n="nav_gallery">Gallery Showcase</span>
+                </a>
+            </nav>
+
+            <!-- SANAD MENU -->
+            <nav class="nav-menu hidden" id="sanad-nav">
+                <a href="#" class="nav-item active" data-page="sanad-explorer-page" id="nav-sanad-portal">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                    <span data-i18n="nav_sanad">Sanad Explorer</span>
+                </a>
+                <a href="#" class="nav-item" data-page="gallery-page" id="nav-gallery-sanad">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                         <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -627,6 +1369,134 @@
                 </div>
             </section>
 
+            <!-- ==========================================
+            SANAD EXPLORER PAGE
+            ========================================== -->
+            <section id="sanad-explorer-page" class="page-section" style="direction: rtl;">
+                <header class="page-header" style="direction: rtl;">
+                    <div>
+                        <h1 class="page-title">مستكشف الأسانيد المتقدم</h1>
+                        <p class="page-subtitle">أداة تفاعلية للتحقق من سلاسل رواية ودراسة اتصال الأسانيد</p>
+                    </div>
+                </header>
+
+                <div class="sanad-main-container">
+                    <!-- Sidebar Search Card -->
+                    <div class="sanad-sidebar">
+                        <div class="sanad-card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--sanad-border-color); padding-bottom: 8px; margin-bottom: 15px;">
+                                <div class="sanad-card-title" style="margin-bottom: 0; border-bottom: none; padding-bottom: 0; font-family: 'Amiri', serif;">البحث والتحقق</div>
+                                <button class="sanad-add-btn" onclick="openAddSheikhModal()">➕ شيخ جديد</button>
+                            </div>
+                            
+                            <div class="sanad-form-group">
+                                <label for="sheikh-search">اسم الشيخ أو المعلم:</label>
+                                <input type="text" id="sheikh-search" class="sanad-form-control" placeholder="اكتب اسم الشيخ للبحث..." autocomplete="off">
+                                <div id="suggestions" class="sanad-suggestions-box"></div>
+                            </div>
+
+                            <div class="sanad-form-group">
+                                <label for="sheikh-id-search">رقم الشيخ (ID):</label>
+                                <input type="number" id="sheikh-id-search" class="sanad-form-control" placeholder="أو أدخل رقم المعرف...">
+                            </div>
+                        </div>
+
+                        <!-- Details Card -->
+                        <div class="sanad-card" id="details-card" style="display: none;">
+                            <div class="sanad-card-title" id="sheikh-detail-name">بطاقة المعلم</div>
+                            <div class="sanad-info-grid">
+                                <div class="sanad-info-item sanad-info-full">
+                                    <label class="label" for="edit-name">الاسم الكامل</label>
+                                    <input type="text" id="edit-name" class="sanad-form-control-edit">
+                                </div>
+                                <div class="sanad-info-item">
+                                    <div class="label">معرف الشيخ (ID)</div>
+                                    <div class="val" id="info-id" style="padding: 6px 0; font-weight: bold;">-</div>
+                                </div>
+                                <div class="sanad-info-item">
+                                    <label class="label" for="edit-country">البلد</label>
+                                    <input type="text" id="edit-country" class="sanad-form-control-edit">
+                                </div>
+                                <div class="sanad-info-item">
+                                    <label class="label" for="edit-city">المدينة</label>
+                                    <input type="text" id="edit-city" class="sanad-form-control-edit">
+                                </div>
+                                <div class="sanad-info-item">
+                                    <label class="label" for="edit-birth">تاريخ الميلاد</label>
+                                    <input type="text" id="edit-birth" class="sanad-form-control-edit" placeholder="YYYY-MM-DD أو YYYY">
+                                </div>
+                                <div class="sanad-info-item sanad-info-full">
+                                    <label class="label" for="edit-details">تفاصيل إضافية</label>
+                                    <textarea id="edit-details" class="sanad-form-control-edit" rows="3" style="resize: vertical;"></textarea>
+                                </div>
+                                <div class="sanad-info-item sanad-info-full">
+                                    <label class="label" for="edit-notes">ملاحظات</label>
+                                    <textarea id="edit-notes" class="sanad-form-control-edit" rows="2" style="resize: vertical;"></textarea>
+                                </div>
+                                <div class="sanad-actions-container">
+                                    <button class="sanad-update-btn" id="btn-update-sheikh" onclick="updateSheikhInfo()">
+                                        💾 تحديث البيانات
+                                    </button>
+                                    <button class="sanad-print-btn" id="btn-add-egaza-trigger" onclick="openAddEgazaModal()">
+                                        📜 إضافة إجازة
+                                    </button>
+                                    <button class="sanad-delete-btn" id="btn-delete-sheikh" onclick="deleteSheikh()">
+                                        🗑️ حذف الشيخ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Area -->
+                    <div class="sanad-workspace">
+                        <div class="sanad-workspace-header">
+                            <!-- Title on the left (first child in LTR flex layout) -->
+                            <div style="font-family: 'Amiri', serif; font-size: 1.4rem; font-weight: bold; direction: rtl;" id="workspace-title">
+                                شجرة السند والتحقق
+                            </div>
+                            <!-- Controls container on the right (second child in LTR flex layout) -->
+                            <div style="display: flex; gap: 12px; align-items: center; direction: rtl;">
+                                <!-- Toggle tab -->
+                                <div class="sanad-view-toggle" id="view-toggle-bar" style="display: none;">
+                                    <button class="sanad-view-btn active" id="btn-tree" onclick="switchView('tree')">شجرة السند</button>
+                                    <button class="sanad-view-btn" id="btn-path" onclick="switchView('path')">خط السند</button>
+                                    <button class="sanad-view-btn" id="btn-text" onclick="switchView('text')">نص السند</button>
+                                </div>
+                                <!-- Print/PDF Button -->
+                                <button class="sanad-print-btn" id="btn-print" style="display: none;" onclick="printWorkspace()">
+                                    🖨️ حفظ كـ PDF
+                                </button>
+                                <!-- Students Button -->
+                                <button class="sanad-print-btn" id="btn-students" style="display: none;" onclick="openStudentsModal()">
+                                    👥 طلاب الشيخ
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="sanad-canvas-card" id="canvas">
+                            <div class="sanad-spinner" id="loading-spinner"></div>
+                            
+                            <div class="sanad-welcome-msg" id="welcome-message">
+                                <div class="sanad-welcome-icon">📜</div>
+                                الرجاء البحث عن اسم الشيخ أو إدخال معرفه لعرض شجرة السند والتحقق.
+                            </div>
+
+                            <!-- Tree visualization dynamic workspace -->
+                            <div class="sanad-tree-container" id="tree-viewport" style="display: none;">
+                                <div class="sanad-tree" id="isnad-tree-root"></div>
+                            </div>
+
+                            <!-- Text flow list view -->
+                            <div class="sanad-path-container" id="path-viewport"></div>
+
+                            <!-- Narrative text paragraph view -->
+                            <div id="text-viewport" style="display: none; padding: 20px; font-family: 'Amiri', serif; font-size: 1.3rem; line-height: 1.8; text-align: right; border: 1px solid var(--sanad-border-color); border-radius: 8px; background-color: #FCFAF7; direction: rtl;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -996,6 +1866,156 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SANAD MODAL 1: DISPLAY STUDENTS
+    ========================================== -->
+    <div id="students-modal" class="sanad-modal-overlay">
+        <div class="sanad-modal-content">
+            <div class="sanad-modal-header">
+                <h3 id="modal-title">طلاب الشيخ</h3>
+                <span class="sanad-modal-close" onclick="closeStudentsModal()">&times;</span>
+            </div>
+            <div class="sanad-modal-body">
+                <input type="text" id="students-search" class="sanad-form-control" placeholder="تصفية أسماء الطلاب بالاسم أو الرقم..." oninput="filterStudents()">
+                <div id="students-list-container" class="sanad-students-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SANAD MODAL 2: ADD NEW NARRATOR
+    ========================================== -->
+    <div id="add-sheikh-modal" class="sanad-modal-overlay">
+        <div class="sanad-modal-content">
+            <div class="sanad-modal-header">
+                <h3>إضافة شيخ جديد</h3>
+                <span class="sanad-modal-close" onclick="closeAddSheikhModal()">&times;</span>
+            </div>
+            <div class="sanad-modal-body">
+                <div class="sanad-form-group">
+                    <label for="new-name">الاسم الكامل (مطلوب):</label>
+                    <input type="text" id="new-name" class="sanad-form-control" placeholder="اكتب اسم الشيخ الكامل...">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="sanad-form-group">
+                        <label for="new-country">البلد:</label>
+                        <input type="text" id="new-country" class="sanad-form-control" placeholder="البلد (مثال: مصر)">
+                    </div>
+                    <div class="sanad-form-group">
+                        <label for="new-city">المدينة:</label>
+                        <input type="text" id="new-city" class="sanad-form-control" placeholder="المدينة (مثال: القاهرة)">
+                    </div>
+                </div>
+                <div class="sanad-form-group">
+                    <label for="new-birth">تاريخ الميلاد:</label>
+                    <input type="text" id="new-birth" class="sanad-form-control" placeholder="YYYY-MM-DD أو YYYY">
+                </div>
+                <div class="sanad-form-group">
+                    <label for="new-details">تفاصيل إضافية:</label>
+                    <textarea id="new-details" class="sanad-form-control" rows="3" placeholder="المؤهلات، الشيوخ، الإجازات..."></textarea>
+                </div>
+                <div class="sanad-form-group">
+                    <label for="new-notes">ملاحظات:</label>
+                    <textarea id="new-notes" class="sanad-form-control" rows="2" placeholder="ملاحظات إضافية..."></textarea>
+                </div>
+                <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="sanad-view-btn" onclick="closeAddSheikhModal()" style="border: 1px solid var(--sanad-border-color); background: none;">إلغاء</button>
+                    <button class="sanad-update-btn" id="btn-save-new-sheikh" onclick="saveNewSheikh()">💾 إضافة الشيخ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SANAD MODAL 3: ADD NEW EGAZA LINK
+    ========================================== -->
+    <div id="add-egaza-modal" class="sanad-modal-overlay">
+        <div class="sanad-modal-content">
+            <div class="sanad-modal-header">
+                <h3 id="egaza-modal-title">إضافة إجازة جديدة</h3>
+                <span class="sanad-modal-close" onclick="closeAddEgazaModal()">&times;</span>
+            </div>
+            <div class="sanad-modal-body">
+                <div class="sanad-form-group">
+                    <label>دور الشيخ الحالي في هذه العلاقة:</label>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+                            <input type="radio" name="egaza-role" value="current-is-teacher" checked>
+                            <span>الشيخ الحالي هو <strong>المعلم</strong> والشيخ الآخر هو <strong>الطالب</strong></span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+                            <input type="radio" name="egaza-role" value="current-is-student">
+                            <span>الشيخ الحالي هو <strong>الطالب</strong> والشيخ الآخر هو <strong>المعلم</strong></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="sanad-form-group" style="position: relative;">
+                    <label for="other-sheikh-search">البحث عن الشيخ الآخر واختياره:</label>
+                    <input type="text" id="other-sheikh-search" class="sanad-form-control" placeholder="اكتب اسم الشيخ الآخر للبحث..." autocomplete="off">
+                    <div id="other-suggestions" class="sanad-suggestions-box"></div>
+                    <input type="hidden" id="other-sheikh-id">
+                    <div id="selected-other-sheikh-preview" style="margin-top: 8px; font-weight: bold; color: var(--sanad-accent-gold); display: none;">
+                        تم اختيار: <span id="selected-other-name">-</span> (ID: <span id="selected-other-id">-</span>)
+                    </div>
+                </div>
+
+                <div class="sanad-form-group">
+                    <label for="egaza-qeraa">الرواية / القراءة:</label>
+                    <input type="text" id="egaza-qeraa" class="sanad-form-control" placeholder="مثال: حفص عن عاصم">
+                </div>
+                <div class="sanad-form-group">
+                    <label for="egaza-tareq">الطريق:</label>
+                    <input type="text" id="egaza-tareq" class="sanad-form-control" placeholder="مثال: الشاطبية">
+                </div>
+
+                <div style="margin-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="sanad-view-btn" onclick="closeAddEgazaModal()" style="border: 1px solid var(--sanad-border-color); background: none;">إلغاء</button>
+                    <button class="sanad-update-btn" id="btn-save-egaza" onclick="saveEgazaRelation()">💾 إضافة الإجازة</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+    SANAD MODAL 4: EDIT/DELETE EXISTING EGAZA
+    ========================================== -->
+    <div id="edit-egaza-link-modal" class="sanad-modal-overlay">
+        <div class="sanad-modal-content">
+            <div class="sanad-modal-header">
+                <h3>تعديل بيانات الإجازة / السند</h3>
+                <span class="sanad-modal-close" onclick="closeEditEgazaLinkModal()">&times;</span>
+            </div>
+            <div class="sanad-modal-body">
+                <input type="hidden" id="edit-link-id">
+                <input type="hidden" id="edit-link-student-id">
+                <input type="hidden" id="edit-link-teacher-id">
+                
+                <div style="background-color: #FAF7F2; padding: 12px; border-radius: 8px; border-right: 3px solid var(--sanad-accent-gold); margin-bottom: 10px; font-family: 'Amiri', serif; font-size: 1.1rem; line-height: 1.6;">
+                    <div>الشيخ المعلم: <strong id="edit-link-teacher-name">-</strong></div>
+                    <div style="margin-top: 4px;">الشيخ الطالب: <strong id="edit-link-student-name">-</strong></div>
+                </div>
+
+                <div class="sanad-form-group">
+                    <label for="edit-link-qeraa">الرواية / القراءة:</label>
+                    <input type="text" id="edit-link-qeraa" class="sanad-form-control" placeholder="مثال: حفص عن عاصم">
+                </div>
+                <div class="sanad-form-group">
+                    <label for="edit-link-tareq">الطريق:</label>
+                    <input type="text" id="edit-link-tareq" class="sanad-form-control" placeholder="مثال: الشاطبية">
+                </div>
+
+                <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <button class="sanad-delete-btn" id="btn-delete-egaza-link" onclick="deleteEgazaLink()">🗑️ حذف الإجازة</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="sanad-view-btn" onclick="closeEditEgazaLinkModal()" style="border: 1px solid var(--sanad-border-color); background: none;">إلغاء</button>
+                        <button class="sanad-update-btn" id="btn-update-egaza-link" onclick="saveUpdatedEgazaLink()">💾 حفظ التعديل</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
