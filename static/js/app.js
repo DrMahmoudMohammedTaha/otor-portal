@@ -5,33 +5,62 @@
 
 const API_BASE = "/api";
 
+// Safe wrapper for localStorage to handle third-party cookie/storage blockages inside iframes (e.g. Hugging Face Spaces)
+const safeStorage = {
+    _mem: {},
+    getItem(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            console.warn("Storage item fetch failed for key: " + key, e);
+            return this._mem[key] || null;
+        }
+    },
+    setItem(key, val) {
+        try {
+            localStorage.setItem(key, val);
+        } catch (e) {
+            console.warn("Storage item save failed for key: " + key, e);
+            this._mem[key] = val;
+        }
+    },
+    removeItem(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (e) {
+            console.warn("Storage item remove failed for key: " + key, e);
+            delete this._mem[key];
+        }
+    }
+};
+
 // State management
 let currentRole = null;
 let sessionToken = null;
 let loggedSheikhId = null;
 let currentSheikhsLoadId = 0;
 let localeData = null;
-let currentLang = localStorage.getItem("otor_lang") || "en";
+let currentLang = safeStorage.getItem("otor_lang") || "en";
 
 // ==========================================
 // Session Handling Functions
 // ==========================================
 function getSession() {
-    sessionToken = localStorage.getItem("otor_token");
-    currentRole = localStorage.getItem("otor_role");
-    const sheikhIdRaw = localStorage.getItem("otor_sheikh_id");
+    sessionToken = safeStorage.getItem("otor_token");
+    currentRole = safeStorage.getItem("otor_role");
+    const sheikhIdRaw = safeStorage.getItem("otor_sheikh_id");
     loggedSheikhId = sheikhIdRaw ? parseInt(sheikhIdRaw, 10) : null;
     return !!sessionToken || currentRole === "guest";
 }
 
 function saveSession(token, role, name, sheikhId) {
-    localStorage.setItem("otor_token", token);
-    localStorage.setItem("otor_role", role);
-    localStorage.setItem("otor_name", name);
+    safeStorage.setItem("otor_token", token);
+    safeStorage.setItem("otor_role", role);
+    safeStorage.setItem("otor_name", name);
     if (sheikhId) {
-        localStorage.setItem("otor_sheikh_id", sheikhId);
+        safeStorage.setItem("otor_sheikh_id", sheikhId);
     } else {
-        localStorage.removeItem("otor_sheikh_id");
+        safeStorage.removeItem("otor_sheikh_id");
     }
     sessionToken = token;
     currentRole = role;
@@ -39,10 +68,10 @@ function saveSession(token, role, name, sheikhId) {
 }
 
 function clearSession() {
-    localStorage.removeItem("otor_token");
-    localStorage.removeItem("otor_role");
-    localStorage.removeItem("otor_name");
-    localStorage.removeItem("otor_sheikh_id");
+    safeStorage.removeItem("otor_token");
+    safeStorage.removeItem("otor_role");
+    safeStorage.removeItem("otor_name");
+    safeStorage.removeItem("otor_sheikh_id");
     sessionToken = null;
     currentRole = null;
     loggedSheikhId = null;
@@ -88,7 +117,7 @@ async function initLocalization() {
 
 async function applyLanguage(lang) {
     currentLang = lang;
-    localStorage.setItem("otor_lang", lang);
+    safeStorage.setItem("otor_lang", lang);
     
     document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
     document.documentElement.setAttribute("lang", lang);
