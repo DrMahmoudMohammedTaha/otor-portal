@@ -1778,6 +1778,8 @@ async function loadGallery(category) {
             
             grid.appendChild(card);
         });
+    } catch (err) {
+        console.error(err);
         grid.innerHTML = `<div style="text-align: center; width: 100%; color: var(--color-danger); padding: 2rem;">${translate("error_gallery", "Error loading gallery images.")}</div>`;
     }
 }
